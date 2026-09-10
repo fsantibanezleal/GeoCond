@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=82"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geocond"
+version = "0.1.0"
+description = "Support-aware spatial conditioning, covariance estimation and sequential simulation"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = ["numpy>=2.5,<3", "scipy>=1.18,<2"]
+classifiers = ["Development Status :: 3 - Alpha", "Programming Language :: Python :: 3", "Topic :: Scientific/Engineering :: Mathematics"]
+
+[project.optional-dependencies]
+cuda = ["torch>=2.14,<3"]
+test = ["pytest>=9", "pytest-cov>=7"]
+reference = ["pykrige==1.7.3", "gstools==1.7.0", "welleng==0.29.1", "scikit-learn>=1.8,<2"]
+dev = ["build>=1.4", "ruff>=0.14", "twine>=6"]
+
+[project.urls]
+Repository = "https://github.com/fsantibanezleal/GeoCond"
+Documentation = "https://github.com/fsantibanezleal/GeoCond/tree/main/docs"
+Issues = "https://github.com/fsantibanezleal/GeoCond/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+geocond = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = ["cuda: requires a real CUDA device", "reference: independent optional reference package"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
