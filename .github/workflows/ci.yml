@@ -19,10 +19,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install the package with its test extras
-        run: pip install -e ".[test]"
-      - name: Tests
-        run: python -m pytest -q tests
+      - name: Install the package, its test extras and the two parity references
+        run: pip install -e ".[test]" gstools==1.7.0 pykrige==1.7.3 ruff==0.16.6
+      - name: Lint
+        run: python -m ruff check src tests scripts
+      - name: Tests, the parity tests against gstat fixtures, GSTools and PyKrige included
+        run: python -m pytest -q -rs tests
       - name: CI budget, no training, trunk-only triggers (ADR-0074)
         run: python scripts/check_ci_budget.py
       - name: No em-dash and no emoji in tracked content (ADR-0067)
