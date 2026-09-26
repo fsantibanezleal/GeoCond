@@ -1,7 +1,7 @@
 """Explicit known sampling measures and Gauss-Legendre support quadrature."""
 
 from dataclasses import dataclass
-from itertools import product
+from itertools import pairwise, product
 
 import numpy as np
 from numpy.polynomial.legendre import leggauss
@@ -79,7 +79,7 @@ def trajectory_support(
         end,
     ]
     points, measure = [], []
-    for a, b in zip(boundaries[:-1], boundaries[1:], strict=True):
+    for a, b in pairwise(boundaries):
         points.append(survey.at(a + (nodes + 1) / 2 * (b - a)).points)
         measure.append(weights / 2 * (b - a) / (end - start))
     return Support(np.concatenate(points), np.concatenate(measure), "trajectory", id)
