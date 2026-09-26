@@ -1,6 +1,7 @@
 """Conservative continuous-interval overlap, coverage and category proportions."""
 
 from dataclasses import dataclass
+from itertools import pairwise
 
 import numpy as np
 
@@ -81,12 +82,12 @@ def composite_intervals(
             raise ValidationError("domains must contain one string or null per interval")
         cuts = []
         order = np.argsort(a, kind="stable")
-        for i, j in zip(order[:-1], order[1:], strict=True):
+        for i, j in pairwise(order):
             if labels[i] != labels[j]:
                 cuts.extend((b[i], a[j]))
         edges = np.unique(np.r_[edges, [x for x in cuts if edges[0] < x < edges[-1]]])
     result = []
-    for lo, hi in zip(edges[:-1], edges[1:], strict=True):
+    for lo, hi in pairwise(edges):
         overlap = np.maximum(0, np.minimum(b, hi) - np.maximum(a, lo))
         selected = np.flatnonzero(overlap > 0)
         valid = selected[np.isfinite(values[selected])]
@@ -134,7 +135,7 @@ def composite_categories(
     ):
         raise ValidationError("Categories must be explicit string/integer codes or null")
     result = []
-    for lo, hi in zip(edges[:-1], edges[1:], strict=True):
+    for lo, hi in pairwise(edges):
         overlap = np.maximum(0, np.minimum(b, hi) - np.maximum(a, lo))
         lengths = {}
         for i in np.flatnonzero(overlap > 0):

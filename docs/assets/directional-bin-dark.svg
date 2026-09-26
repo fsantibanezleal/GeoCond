@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="320" viewBox="0 0 760 320" role="img" aria-labelledby="t d">
+  <title id="t">A directional lag bin</title>
+  <desc id="d">The region of separations a directional variogram admits: within the angle tolerance of the direction and within the bandwidth of its line, cut into lag bins; one separation inside, two outside.</desc>
+  <style>
+    .t { font: 600 15px 'Segoe UI', Helvetica, Arial, sans-serif; fill: #c9d1d9; }
+    .b { font: 13px 'Segoe UI', Helvetica, Arial, sans-serif; fill: #c9d1d9; }
+    .m { font: 12px 'Segoe UI', Helvetica, Arial, sans-serif; fill: #8b949e; }
+  </style>
+  <rect width="760" height="320" fill="#0d1117"/>
+  <text class="t" x="24" y="30">A directional lag bin: angle tolerance, bandwidth and lag edges</text>
+  <polygon points="90.0,170.0 201.4,125.0 590.0,125.0 590.0,215.0 201.4,215.0" fill="#58a6ff" fill-opacity="0.12" stroke="#58a6ff" stroke-width="1.5"/>
+  <line x1="240.0" y1="125.0" x2="240.0" y2="215.0" stroke="#8b949e" stroke-dasharray="3 3"/>
+  <text class="m" x="240.0" y="233.0" text-anchor="middle">30 m</text>
+  <line x1="365.0" y1="125.0" x2="365.0" y2="215.0" stroke="#8b949e" stroke-dasharray="3 3"/>
+  <text class="m" x="365.0" y="233.0" text-anchor="middle">55 m</text>
+  <line x1="490.0" y1="125.0" x2="490.0" y2="215.0" stroke="#8b949e" stroke-dasharray="3 3"/>
+  <text class="m" x="490.0" y="233.0" text-anchor="middle">80 m</text>
+  <line x1="90" y1="170" x2="610.0" y2="170" stroke="#c9d1d9" stroke-width="1.5"/>
+  <text class="b" x="614.0" y="174">direction d</text>
+  <text class="b" x="24.0" y="204.0">t = 22 degrees</text>
+  <line x1="550.0" y1="170" x2="550.0" y2="125.0" stroke="#f0883e" stroke-width="2"/>
+  <text class="b" x="556.0" y="147.5" fill="#f0883e" style="fill:#f0883e">b</text>
+  <line x1="90" y1="170" x2="300.0" y2="140.0" stroke="#3fb950" stroke-width="2"/>
+  <circle cx="300.0" cy="140.0" r="4" fill="#3fb950"/>
+  <line x1="90" y1="170" x2="190.0" y2="107.5" stroke="#f85149" stroke-width="2"/>
+  <circle cx="190.0" cy="107.5" r="4" fill="#f85149"/>
+  <line x1="90" y1="170" x2="440.0" y2="105.0" stroke="#f85149" stroke-width="2"/>
+  <circle cx="440.0" cy="105.0" r="4" fill="#f85149"/>
+  <text class="m" x="24" y="265.0">green: admitted, |h . d| &gt;= |h| cos t and its distance from the line of d is at most b.</text>
+  <text class="m" x="24" y="283.0">red: outside the angle or the band. Lag bin k holds edges[k] &lt;= |h| &lt; edges[k+1]; both tolerances are inclusive.</text>
+</svg>

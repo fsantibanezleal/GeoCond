@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
+from geocond.compositing import composite_categories, composite_intervals, fixed_boundaries
 from geocond.geometry import Survey, tangent
 from geocond.support import Support, block_support, line_support, point_support, trajectory_support
-from geocond.compositing import composite_categories, composite_intervals, fixed_boundaries
 from geocond.validation import ValidationError
 
 
