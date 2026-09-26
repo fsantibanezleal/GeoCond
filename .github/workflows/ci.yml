@@ -1,0 +1,29 @@
+name: ci
+
+# ADR-0074: cheap checks only, trunk-only triggers, a concurrency group, a timeout on every job.
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the package with its test extras
+        run: pip install -e ".[dev]" 2>/dev/null || pip install -e . pytest
+      - name: Tests
+        run: python -m pytest -q tests
+      - name: CI budget, no training, trunk-only triggers (ADR-0074)
+        run: python scripts/check_ci_budget.py
+      - name: No em-dash and no emoji in tracked content (ADR-0067)
+        run: python scripts/check_content_standards.py
