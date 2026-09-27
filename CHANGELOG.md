@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.06.000] - 2026-09-26
+
+### Added
+
+- `cuda`: the float64 PyTorch lanes of the settled engine table. `experimental_variogram` and
+  `experimental_cross_variogram` take `backend="torch"`: every spatial pair tiled on the device with the same
+  membership rules; identical counts and pairs, bins within 1e-12 relative. `predict` takes `backend="torch"`: point
+  support simple and ordinary kriging and cokriging solved in batches of equal neighbourhood size with the same
+  neighbourhoods, failure rules and diagnostics; agreement with the reference within 1e-15. Universal kriging, the
+  jitter policy and integrated supports are refused on the lane.
+- Tests for both lanes (run locally where a CUDA device exists; reported as skipped in CI). Docs: the CUDA lane sections
+  of the variogram and kriging pages, with measured timings.
+
 ## [0.05.000] - 2026-09-26
 
 ### Added

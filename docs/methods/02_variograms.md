@@ -50,6 +50,16 @@ counts come with every estimate.
 **Sampling.** On large data `max_pairs` draws a seeded uniform sample of the candidate pairs without replacement. The
 result records the population size, that it was sampled, and the seed; the same seed gives the same pairs.
 
+## The CUDA lane
+
+`backend="torch"` enumerates every spatial pair on a PyTorch device in float64, tiled over rows, with the same
+membership rules, and accumulates counts, separations and squared (or root) differences per bin. Counts, coincident
+pairs and the retained pairs are identical to the reference; bin values agree within 1e-12 relative, because the GPU
+accumulates atomically in no fixed order (measured: 2e-14 for the classical estimator and 1e-13 for Cressie-Hawkins,
+whose fourth power amplifies rounding). Downhole pairs and seeded pair sampling stay on NumPy. On 3,000 points
+(4.5 million pairs, twelve bins) the lane took 0.04 to 0.08 s against 0.31 to 0.38 s for NumPy on the same laptop, once
+the CUDA context was warm.
+
 ## Fitting
 
 `fit_variogram` fits nested families (and a nugget unless disabled) to one or more direct experimental variograms by
