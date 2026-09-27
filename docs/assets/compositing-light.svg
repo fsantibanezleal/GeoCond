@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="266" viewBox="0 0 760 266" role="img" aria-labelledby="t d">
+  <title id="t">Length-weighted compositing</title>
+  <desc id="d">Three source intervals with values 2, 5 and 3 and a one-metre gap, composited to two-metre intervals: 3.5 with full coverage, an interval with half coverage that is not estimated, and 3 with full coverage.</desc>
+  <style>
+    .t { font: 600 15px 'Segoe UI', Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .b { font: 13px 'Segoe UI', Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .m { font: 12px 'Segoe UI', Helvetica, Arial, sans-serif; fill: #59636e; }
+  </style>
+  <rect width="760" height="266" fill="#ffffff"/>
+  <text class="t" x="24" y="30">Length-weighted compositing tracks the valid length; a gap is never bridged</text>
+  <text class="b" x="24" y="86">source intervals</text>
+  <rect x="150.0" y="66" width="95.0" height="30" fill="#0969da" fill-opacity="0.18" stroke="#0969da" stroke-width="2"/>
+  <text class="b" x="197.5" y="86" text-anchor="middle">2</text>
+  <rect x="245.0" y="66" width="190.0" height="30" fill="#0969da" fill-opacity="0.18" stroke="#0969da" stroke-width="2"/>
+  <text class="b" x="340.0" y="86" text-anchor="middle">5</text>
+  <rect x="530.0" y="66" width="190.0" height="30" fill="#0969da" fill-opacity="0.18" stroke="#0969da" stroke-width="2"/>
+  <text class="b" x="625.0" y="86" text-anchor="middle">3</text>
+  <text class="m" x="482.5" y="86" text-anchor="middle">gap</text>
+  <text class="b" x="24" y="156">2 m composites</text>
+  <rect x="150.0" y="130" width="190.0" height="40" fill="none" stroke="#1a7f37" stroke-width="2"/>
+  <text class="b" x="245.0" y="150" text-anchor="middle">3.5</text>
+  <text class="m" x="245.0" y="165" text-anchor="middle">coverage 1</text>
+  <rect x="340.0" y="130" width="190.0" height="40" fill="none" stroke="#d1242f" stroke-width="2"/>
+  <text class="b" x="435.0" y="150" text-anchor="middle">not estimated</text>
+  <text class="m" x="435.0" y="165" text-anchor="middle">coverage 0.5</text>
+  <rect x="530.0" y="130" width="190.0" height="40" fill="none" stroke="#1a7f37" stroke-width="2"/>
+  <text class="b" x="625.0" y="150" text-anchor="middle">3</text>
+  <text class="m" x="625.0" y="165" text-anchor="middle">coverage 1</text>
+  <line x1="150" y1="102" x2="150" y2="108" stroke="#59636e"/>
+  <text class="m" x="150" y="123" text-anchor="middle">0 m</text>
+  <line x1="245" y1="102" x2="245" y2="108" stroke="#59636e"/>
+  <text class="m" x="245" y="123" text-anchor="middle">1 m</text>
+  <line x1="340" y1="102" x2="340" y2="108" stroke="#59636e"/>
+  <text class="m" x="340" y="123" text-anchor="middle">2 m</text>
+  <line x1="435" y1="102" x2="435" y2="108" stroke="#59636e"/>
+  <text class="m" x="435" y="123" text-anchor="middle">3 m</text>
+  <line x1="530" y1="102" x2="530" y2="108" stroke="#59636e"/>
+  <text class="m" x="530" y="123" text-anchor="middle">4 m</text>
+  <line x1="625" y1="102" x2="625" y2="108" stroke="#59636e"/>
+  <text class="m" x="625" y="123" text-anchor="middle">5 m</text>
+  <line x1="720" y1="102" x2="720" y2="108" stroke="#59636e"/>
+  <text class="m" x="720" y="123" text-anchor="middle">6 m</text>
+  <text class="m" x="24" y="210">[0, 2]: (1 x 2 + 1 x 5) / 2 = 3.5, numerator 7, valid length 2. [2, 4]: 1 m of 5 over 2 m, coverage 0.5:</text>
+  <text class="m" x="24" y="228">below the declared minimum coverage of 1, so it is kept with its numerator and valid length but has no mean.</text>
+  <text class="m" x="24" y="246">The grade-length integral of the covered length is conserved: 2 + 10 + 6 = 18 = 7 + 5 + 6.</text>
+</svg>

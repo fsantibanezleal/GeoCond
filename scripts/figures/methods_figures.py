@@ -4,6 +4,7 @@
 Usage: python scripts/figures/methods_figures.py   (from the repository root)
 """
 
+from itertools import pairwise
 from math import cos, radians, sin
 from pathlib import Path
 
@@ -281,6 +282,81 @@ def ds(p):
                "\n".join(parts) + "\n", p)
 
 
+def curvature(p):
+    """A three-station survey in a north-vertical plane: the minimum-curvature arc, its stations and the straight chord."""
+    from geocond.geometry import Survey
+
+    md = np.array([0.0, 120.0, 260.0])
+    survey = Survey([0.0, 0.0, 0.0], md, [0.0, 0.0, 0.0], [-25.0, -55.0, -85.0])
+    dense = survey.at(np.linspace(0, md[-1], 200)).points
+    mid = survey.at([60.0, 190.0]).points
+    x0, y0, scale = 90, 70, 1.25
+    X = lambda north: x0 + scale * north
+    Y = lambda z: y0 - scale * z
+    parts = ['  <text class="t" x="24" y="30">Minimum curvature: positions between stations lie on the arc, not on the chord</text>']
+    parts.append(f'  <line x1="{X(0)}" y1="{Y(0)}" x2="{X(0)}" y2="{Y(-215):.1f}" stroke="{p["grid"]}"/>')
+    parts.append(f'  <text class="m" x="{X(0) - 8}" y="{Y(-215) + 4:.1f}" text-anchor="end">z</text>')
+    parts.append(f'  <line x1="{X(0)}" y1="{Y(0)}" x2="{X(260):.1f}" y2="{Y(0)}" stroke="{p["grid"]}"/>')
+    parts.append(f'  <text class="m" x="{X(260):.1f}" y="{Y(0) - 8}" text-anchor="end">north</text>')
+    path_d = " ".join(f"{'M' if i == 0 else 'L'}{X(n):.1f},{Y(z):.1f}" for i, (_, n, z) in enumerate(dense))
+    parts.append(f'  <path d="{path_d}" fill="none" stroke="{p["a"]}" stroke-width="3"/>')
+    stations = survey.station_points
+    for (_, n0, z0), (_, n1, z1) in pairwise(stations):
+        parts.append(f'  <line x1="{X(n0):.1f}" y1="{Y(z0):.1f}" x2="{X(n1):.1f}" y2="{Y(z1):.1f}" stroke="{p["b"]}" stroke-width="1.5" stroke-dasharray="6 4"/>')
+    for (_, n, z), label in zip(stations, ("collar, MD 0", "station, MD 120", "station, MD 260"), strict=True):
+        parts.append(f'  <circle cx="{X(n):.1f}" cy="{Y(z):.1f}" r="6" fill="{p["a"]}"/>')
+        parts.append(f'  <text class="b" x="{X(n) + 12:.1f}" y="{Y(z) + 4:.1f}">{label}</text>')
+    for (_, n, z), (_, na, za), (_, nb, zb) in zip(mid, stations[:-1], stations[1:], strict=True):
+        parts.append(f'  <circle cx="{X(n):.1f}" cy="{Y(z):.1f}" r="4.5" fill="{p["c"]}"/>')
+        parts.append(f'  <circle cx="{X((na + nb) / 2):.1f}" cy="{Y((za + zb) / 2):.1f}" r="4.5" fill="none" stroke="{p["b"]}" stroke-width="2"/>')
+    parts.append(f'  <circle cx="440" cy="300" r="4.5" fill="{p["c"]}"/><text class="b" x="452" y="304">MD half-way, on the arc</text>')
+    parts.append(f'  <circle cx="440" cy="324" r="4.5" fill="none" stroke="{p["b"]}" stroke-width="2"/><text class="b" x="452" y="328">chord midpoint (not used)</text>')
+    gap = float(np.linalg.norm(mid[1] - (stations[1] + stations[2]) / 2))
+    parts.append('  <text class="m" x="24" y="372">Stations at azimuth 0 with dips -25, -55 and -85 degrees. Between the last two stations the half-way point on the arc</text>')
+    parts.append(f'  <text class="m" x="24" y="390">is {gap:.2f} m from the chord midpoint; straight-chord interpolation would move every interval centre by up to that much.</text>')
+    return svg(760, 410, "Minimum-curvature desurvey",
+               "A three-station survey drawn in its north-vertical plane: the circular arcs of minimum curvature through "
+               "the stations, the dashed chords between them, and at half-way measured depth the arc position used by "
+               "GeoCond next to the chord midpoint it does not use.",
+               "\n".join(parts) + "\n", p)
+
+
+def compositing(p):
+    """The acceptance fixture and a gap: source intervals, 2 m composites, their means and coverage."""
+    from geocond.compositing import composite_intervals, fixed_boundaries
+
+    rows = [(0.0, 1.0, 2.0), (1.0, 3.0, 5.0), (4.0, 6.0, 3.0)]
+    a, b, z = (np.array(c) for c in zip(*rows, strict=True))
+    edges = fixed_boundaries(0.0, 6.0, 2.0)
+    comps = composite_intervals(a, b, z, edges, source_ids=["s1", "s2", "s3"], min_coverage=1.0)
+    x0, unit = 150, 95
+    X = lambda depth: x0 + unit * depth
+    parts = ['  <text class="t" x="24" y="30">Length-weighted compositing tracks the valid length; a gap is never bridged</text>']
+    parts.append('  <text class="b" x="24" y="86">source intervals</text>')
+    for lo, hi, value in rows:
+        parts.append(f'  <rect x="{X(lo):.1f}" y="66" width="{unit * (hi - lo):.1f}" height="30" fill="{p["fill"]}" fill-opacity="0.18" stroke="{p["a"]}" stroke-width="2"/>')
+        parts.append(f'  <text class="b" x="{X((lo + hi) / 2):.1f}" y="86" text-anchor="middle">{value:g}</text>')
+    parts.append(f'  <text class="m" x="{X(3.5):.1f}" y="86" text-anchor="middle">gap</text>')
+    parts.append('  <text class="b" x="24" y="156">2 m composites</text>')
+    for c in comps:
+        colour = p["c"] if c.status == "estimated" else p["no"]
+        parts.append(f'  <rect x="{X(c.start):.1f}" y="130" width="{unit * (c.end - c.start):.1f}" height="40" fill="none" stroke="{colour}" stroke-width="2"/>')
+        mean = f"{c.mean:g}" if c.status == "estimated" else "not estimated"
+        parts.append(f'  <text class="b" x="{X((c.start + c.end) / 2):.1f}" y="150" text-anchor="middle">{mean}</text>')
+        parts.append(f'  <text class="m" x="{X((c.start + c.end) / 2):.1f}" y="165" text-anchor="middle">coverage {c.coverage:g}</text>')
+    for d in range(7):
+        parts.append(f'  <line x1="{X(d)}" y1="102" x2="{X(d)}" y2="108" stroke="{p["muted"]}"/>')
+        parts.append(f'  <text class="m" x="{X(d)}" y="123" text-anchor="middle">{d} m</text>')
+    first = comps[0]
+    parts.append(f'  <text class="m" x="24" y="210">[0, 2]: (1 x 2 + 1 x 5) / 2 = {first.mean:g}, numerator {first.numerator:g}, valid length {first.valid_length:g}. [2, 4]: 1 m of 5 over 2 m, coverage 0.5:</text>')
+    parts.append('  <text class="m" x="24" y="228">below the declared minimum coverage of 1, so it is kept with its numerator and valid length but has no mean.</text>')
+    parts.append('  <text class="m" x="24" y="246">The grade-length integral of the covered length is conserved: 2 + 10 + 6 = 18 = 7 + 5 + 6.</text>')
+    return svg(760, 266, "Length-weighted compositing",
+               "Three source intervals with values 2, 5 and 3 and a one-metre gap, composited to two-metre intervals: "
+               "3.5 with full coverage, an interval with half coverage that is not estimated, and 3 with full coverage.",
+               "\n".join(parts) + "\n", p)
+
+
 def main():
     ASSETS.mkdir(parents=True, exist_ok=True)
     for mode, palette in PALETTES.items():
@@ -290,6 +366,8 @@ def main():
         (ASSETS / f"mik-correction-{mode}.svg").write_text(mik(palette), encoding="utf-8", newline="\n")
         (ASSETS / f"sgs-transect-{mode}.svg").write_text(sgs(palette), encoding="utf-8", newline="\n")
         (ASSETS / f"direct-sampling-{mode}.svg").write_text(ds(palette), encoding="utf-8", newline="\n")
+        (ASSETS / f"minimum-curvature-{mode}.svg").write_text(curvature(palette), encoding="utf-8", newline="\n")
+        (ASSETS / f"compositing-{mode}.svg").write_text(compositing(palette), encoding="utf-8", newline="\n")
     print("written to", ASSETS)
 
 
