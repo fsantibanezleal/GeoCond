@@ -432,3 +432,172 @@ def fit_variogram(
     model = build(np.array(chosen["final"]))
     return VariogramFit(model, chosen["objective"], weighting, len(target), tuple(records), best,
                         chosen["iterations"], chosen["converged"], model.spectra())
+
+
+def _pairs_of(variograms: dict) -> list[tuple[int, int, list[ExperimentalVariogram]]]:
+    out = []
+    for key, value in variograms.items():
+        a, b = (int(k) for k in key)
+        if a > b:
+            raise ValidationError("LMC variogram keys are (a, b) with a <= b")
+        group = [value] if isinstance(value, ExperimentalVariogram) else list(value)
+        for v in group:
+            if v.cross != (a != b):
+                raise ValidationError(f"variogram ({a}, {b}) must be {'a cross' if a != b else 'a direct'} variogram")
+        out.append((a, b, group))
+    return sorted(out, key=lambda item: (item[0], item[1]))
+
+
+def fit_lmc(
+    variograms: dict,
+    families: Sequence[str],
+    *,
+    rotation: ArrayLike | None = None,
+    isotropic: bool = False,
+    nugget: bool = True,
+    weighting: str = "counts",
+    starts: int = 5,
+    range_bounds: tuple[float, float] | None = None,
+    max_iterations: int = 4000,
+) -> VariogramFit:
+    """Fit a linear model of coregionalization jointly to direct and cross experimental variograms.
+
+    ``variograms`` maps ``(a, b)`` with a <= b to one or more experimental variograms: direct ones for a == b, cross
+    ones (on common supports) for a < b; every variable needs its direct variogram. Every component shares its family
+    and its ranges across variables, and its p x p sill matrix is parameterized as ``B_k = L_k L_k^T`` (the nugget as
+    ``N = L_0 L_0^T``), so every fitted matrix is positive semidefinite by construction instead of being projected
+    afterwards. Variables are standardized by their largest direct semivariance while fitting, so units do not weight
+    the objective; each (a, b) pair's weights sum to one and the pairs count equally. Starts are deterministic: the
+    initial ranges spread over the observed lags and the initial sill matrices share a correlation estimated from the
+    mean levels of the variograms. The lowest objective wins and every start is recorded.
+    """
+    pairs = _pairs_of(variograms)
+    families = list(families)
+    if not families or any(f not in FAMILIES for f in families):
+        raise ValidationError(f"families must be a nonempty list drawn from {FAMILIES}")
+    if weighting not in WEIGHTINGS:
+        raise ValidationError(f"weighting must be one of {WEIGHTINGS}")
+    starts = integer(starts, "starts")
+    variables = sorted({a for a, _, _ in pairs} | {b for _, b, _ in pairs})
+    p = len(variables)
+    if variables != list(range(p)):
+        raise ValidationError("variables must be numbered 0 .. p-1")
+    if any(not any(a == b == v for a, b, _ in pairs) for v in variables):
+        raise ValidationError("every variable needs its direct variogram")
+    frame = rotation_matrix(rotation)
+    if not isotropic:
+        directions = np.array([v.direction for _, _, group in pairs for v in group if v.direction is not None])
+        count = sum(len(group) for _, _, group in pairs)
+        if len(directions) != count or np.linalg.matrix_rank(directions, tol=1e-8) < 3:
+            raise ValidationError("an anisotropic LMC fit needs directional variograms spanning three dimensions")
+
+    level = {}
+    for a, b, group in pairs:
+        if a == b:
+            values = np.concatenate([v.values[v.valid] for v in group])
+            level[a] = float(np.max(values)) if len(values) and np.max(values) > 0 else 1.0
+    scale = np.sqrt(np.array([level[v] for v in variables]))
+    data = []
+    all_lags = []
+    for a, b, group in pairs:
+        lags, targets, weights = [], [], []
+        for v in group:
+            ok = v.valid
+            lags.append(_lag_vectors(v, isotropic)[ok])
+            targets.append(v.values[ok] / (scale[a] * scale[b]))
+            if weighting == "counts":
+                weights.append(v.counts[ok].astype(float))
+            elif weighting == "counts-over-lag2":
+                weights.append(v.counts[ok] / v.separation[ok] ** 2)
+            else:
+                weights.append(np.ones(ok.sum()))
+        lag = np.concatenate(lags)
+        w = np.concatenate(weights)
+        data.append((a, b, lag, np.concatenate(targets), w / w.sum()))
+        all_lags.append(lag)
+    max_sep = float(np.max(np.linalg.norm(np.concatenate(all_lags), axis=1)))
+    lo, hi = range_bounds if range_bounds is not None else (0.01 * max_sep, 5.0 * max_sep)
+    lo, hi = positive(lo, "range lower bound"), positive(hi, "range upper bound")
+    if hi <= lo:
+        raise ValidationError("range bounds must be increasing")
+    k = len(families)
+    n_ranges = 1 if isotropic else 3
+    tri = np.tril_indices(p)
+    n_tri = len(tri[0])
+
+    def lower(theta, at):
+        m = np.zeros((p, p))
+        m[tri] = theta[at : at + n_tri]
+        return m
+
+    def unpack(theta):
+        at = 0
+        nug = np.zeros((p, p))
+        if nugget:
+            factor = lower(theta, 0)
+            nug = factor @ factor.T
+            at = n_tri
+        sills = []
+        for _ in range(k):
+            factor = lower(theta, at)
+            sills.append(factor @ factor.T)
+            at += n_tri
+        ranges = theta[at:].reshape(k, n_ranges) * max_sep
+        return nug, sills, ranges
+
+    def objective(theta):
+        nug, sills, ranges = unpack(theta)
+        units = [
+            CovarianceComponent(families[c], np.repeat(ranges[c], 3) if isotropic else ranges[c], [[1.0]], frame)
+            for c in range(k)
+        ]
+        total = 0.0
+        for a, b, lag, target, w in data:
+            gamma = np.full(len(target), nug[a, b])
+            for c in range(k):
+                gamma = gamma + sills[c][a, b] * (1.0 - units[c].correlation(lag))
+            total += float(np.sum(w * (target - gamma) ** 2))
+        return total / len(data)
+
+    # the initial correlation between variables, from the mean levels of the variograms, made positive definite
+    corr = np.eye(p)
+    direct_mean = {a: float(np.mean(t)) for a, b, _, t, _ in data if a == b}
+    for a, b, _, target, _ in data:
+        if a != b:
+            r = float(np.mean(target)) / np.sqrt(direct_mean[a] * direct_mean[b])
+            corr[a, b] = corr[b, a] = float(np.clip(r, -0.9, 0.9))
+    evals, evecs = np.linalg.eigh(corr)
+    corr = evecs @ np.diag(np.maximum(evals, 0.05)) @ evecs.T
+    d = np.sqrt(np.diag(corr))
+    corr = corr / np.outer(d, d)
+    fractions = np.linspace(0.2, 1.5, starts) if starts > 1 else np.array([0.6])
+    n_free = (n_tri if nugget else 0) + k * n_tri
+    bounds = [(None, None)] * n_free + [(lo / max_sep, hi / max_sep)] * (k * n_ranges)
+    records = []
+    best = None
+    for s, fraction in enumerate(fractions):
+        theta0 = []
+        if nugget:
+            theta0 += np.linalg.cholesky(0.1 * corr)[tri].tolist()
+        for _ in range(k):
+            theta0 += np.linalg.cholesky(0.9 / k * corr)[tri].tolist()
+        theta0 += [min(max(fraction * (c + 1) / k, lo / max_sep), hi / max_sep) for c in range(k) for _ in range(n_ranges)]
+        theta0 = np.array(theta0)
+        result = minimize(objective, theta0, method="L-BFGS-B", bounds=bounds,
+                          options={"maxiter": max_iterations, "ftol": 1e-15, "gtol": 1e-12})
+        records.append({"initial": theta0.tolist(), "final": result.x.tolist(), "objective": float(result.fun),
+                        "iterations": int(result.nit), "converged": bool(result.success),
+                        "message": str(result.message)})
+        if best is None or result.fun < records[best]["objective"] - 1e-15:
+            best = s
+    chosen = records[best]
+    nug, sills, ranges = unpack(np.array(chosen["final"]))
+    scaling = np.diag(scale)
+    components = tuple(
+        CovarianceComponent(f, np.repeat(r, 3) if isotropic else r, scaling @ B @ scaling, frame)
+        for f, B, r in zip(families, sills, ranges, strict=True)
+    )
+    model = CovarianceModel(components, nugget=scaling @ nug @ scaling)
+    bins = sum(len(t) for _, _, _, t, _ in data)
+    return VariogramFit(model, chosen["objective"], weighting, bins, tuple(records), best, chosen["iterations"],
+                        chosen["converged"], model.spectra())

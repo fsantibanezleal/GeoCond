@@ -68,6 +68,23 @@ lags; the lowest objective wins, ties go to the first start, and every start is 
 evidence of good prediction at withheld holes: model selection belongs to a fixed spatial validation protocol in the
 consuming product.
 
+## Fitting a linear model of coregionalization
+
+`fit_lmc` fits several variables at once, to their direct variograms and their cross variograms on common supports.
+Every component shares its family and its ranges across variables, and its sill matrix is parameterized as
+
+$$B_k = L_k L_k^{\mathsf T}, \qquad N = L_0 L_0^{\mathsf T},$$
+
+with $L_k$ lower triangular and unconstrained, so every fitted matrix is positive semidefinite by construction. This is
+the constrained alternative the methods dossier names to gstat's `fit.lmc`, which fits the direct and cross variograms
+and then projects each sill matrix by setting negative eigenvalues to zero: a projection changes the fitted model and
+can still leave a singular cokriging system, while a Cholesky parameterization never leaves the valid set. While
+fitting, every variable is standardized by its largest direct semivariance so its units do not weight the objective;
+each direct or cross pair's weights sum to one and the pairs count equally. The starts are deterministic: the initial
+ranges spread over the lags as for one variable, and the initial sill matrices share a correlation estimated from the
+mean levels of the variograms, made positive definite. The fit records the objective of every start and the spectrum
+of every fitted matrix.
+
 ## What the tests establish
 
 | Question | Result |
@@ -80,6 +97,9 @@ consuming product.
 | Is a noise-free nested variogram (nugget, spherical 30, exponential 90) recovered? | every parameter within 1e-4, objective below 1e-12 |
 | Are three principal ranges recovered from three directions in a rotated frame? | 60, 25 and 10 recovered within 1e-4; two directions are refused |
 | Does a field simulated from exponential range 24 with a nugget fit near it? | seeded, 350 points: total sill within 30% and range within 45% |
+| Is the reference two-variable LMC (a nugget, an exponential and a spherical structure) recovered from its direct and cross variograms? | both sill matrices, both ranges and the nugget within 1e-4, objective below 1e-12 |
+| Is a random three-variable LMC recovered, and is it PSD? | sill matrix within 1e-3; smallest eigenvalue nonnegative by construction |
+| Missing direct variograms, or a direct variogram given as a cross one? | refused |
 
 ## References
 
