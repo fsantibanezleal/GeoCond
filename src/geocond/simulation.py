@@ -15,7 +15,12 @@ broader-tail sensitivity recipe. A univariate transform does not make the joint 
 **Sequential Gaussian simulation.** Each realization visits the target nodes on a seeded random path. At each node,
 simple kriging with mean 0 in normal-score space, on the original conditioning data and the nodes already simulated
 (within the neighbourhood), gives a conditional mean and variance; the node gets mean + sd x epsilon with a recorded
-standard normal innovation epsilon, and joins the conditioning set. Hard data are never altered: a node at a
+standard normal innovation epsilon, and joins the conditioning set. The neighbourhood is one search over data and
+nodes together, or, with ``node_neighborhood``, a two-part search as GSLIB's ``sstrat = 0`` (Deutsch and Journel
+1998): the original data by ``neighborhood`` (its group limits and minimum apply to them) and the simulated nodes by
+``node_neighborhood`` (its ``max_samples`` is GSLIB's ``ncnode``). The single search lets dense nodes crowd the data
+out of the system: along a line of nodes far from every datum, the nodes soon fill the neighbourhood and the
+realization stops seeing the data. Hard data are never altered: a node at a
 conditioning location takes its value. Every realization is back-transformed to native units; ensemble statistics
 (the E-type mean, quantiles, exceedance frequencies) are computed from the native realizations, never by
 back-transforming a Gaussian mean. The simulation conditions on support centroids (the point-support approximation),
@@ -113,6 +118,7 @@ class SimulationResult:
     seed: int
     transform: NormalScoreTransform
     neighborhood: Neighborhood
+    node_neighborhood: Neighborhood | None = None
 
     def etype(self) -> NDArray[np.float64]:
         """The ensemble mean of the native realizations."""
@@ -134,6 +140,7 @@ def sequential_gaussian(
     realizations: int = 1,
     seed: int = 0,
     neighborhood: Neighborhood | None = None,
+    node_neighborhood: Neighborhood | None = None,
     cancel: Callable[[], bool] | None = None,
 ) -> SimulationResult:
     """Sequential Gaussian simulation of ``observations`` (native units, one variable) at ``targets``.
@@ -141,12 +148,25 @@ def sequential_gaussian(
     ``model`` is the covariance of the normal scores (its sill should be near one). Realization r draws its path and
     innovations from ``numpy.random.default_rng([seed, r])``, so any realization can be regenerated alone. A node whose
     centroid coincides with a conditioning centroid takes the conditioning value exactly.
+
+    Without ``node_neighborhood``, ``neighborhood`` is one search over the data and the nodes already simulated, and
+    group limits are refused (simulated nodes have no group). With it, the search has two parts: ``neighborhood``
+    selects the original data with their group identities, and its minimum applies to them; ``node_neighborhood``
+    selects the nodes already simulated, and its minimum is not applied. A node whose data are fewer than the minimum
+    is drawn from the model sill, as in the single search.
     """
     if observations.n_variables != 1 or model.n_variables != 1:
         raise ValidationError("sequential Gaussian simulation is univariate")
     realizations = integer(realizations, "realizations")
     targets = tuple(targets)
     hood = neighborhood if neighborhood is not None else Neighborhood(max_samples=len(observations) + len(targets))
+    two_part = node_neighborhood is not None
+    if two_part and node_neighborhood.needs_groups:
+        raise ValidationError("simulated nodes have no group: node_neighborhood cannot limit or require groups")
+    if not two_part and hood.needs_groups:
+        raise ValidationError("the single search mixes data and simulated nodes, which have no group: declare "
+                              "node_neighborhood to limit the data per group")
+    data_variables = np.zeros(len(observations), np.int64)
     data_xyz = observations.centers
     data_y = transform.forward(observations.values)
     node_xyz = np.array([t.center for t in targets])
@@ -177,7 +197,15 @@ def sequential_gaussian(
                 continue
             xyz = np.concatenate([data_xyz, sim_xyz[:count]]) if count else data_xyz
             yy = np.concatenate([data_y, sim_y[:count]]) if count else data_y
-            idx, _, why = hood.select(xyz, np.zeros(len(xyz), np.int64), None, node_xyz[node], (0,))
+            if two_part:
+                idx, _, why = hood.select(data_xyz, data_variables, observations.groups, node_xyz[node], (0,))
+                if count and why is None:
+                    # the nodes' minimum is not applied: the selection is complete before that check
+                    near, _, _ = node_neighborhood.select(sim_xyz[:count], np.zeros(count, np.int64), None,
+                                                          node_xyz[node], (0,))
+                    idx = np.concatenate([idx, len(data_xyz) + near])
+            else:
+                idx, _, why = hood.select(xyz, np.zeros(len(xyz), np.int64), None, node_xyz[node], (0,))
             eps = rng.standard_normal()
             if why is not None:
                 mu, var = 0.0, float(model.total_sill[0, 0])
@@ -206,4 +234,5 @@ def sequential_gaussian(
             count += 1
     native = transform.backward(gaussian)
     native[:, hard] = observations.values[hard_index[hard]]
-    return SimulationResult(native, gaussian, paths, innovations, cmean, csd, hard, int(seed), transform, hood)
+    return SimulationResult(native, gaussian, paths, innovations, cmean, csd, hard, int(seed), transform, hood,
+                            node_neighborhood)
