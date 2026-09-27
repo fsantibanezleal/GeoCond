@@ -77,6 +77,19 @@ of the dense conditional covariance ordered by the path. The tests reconstruct e
 recorded innovations and match it to 1e-10. A limited neighbourhood approximates that conditional; it is declared with
 the result.
 
+**The search, in one part or two.** By default one neighbourhood is drawn from the original data and the nodes
+already simulated together. Where nodes are dense and the data sparse (a drillhole's samples 1 m apart, the nearest
+other hole 100 m away), the nearest candidates soon are all nodes: the realization stops seeing the data and drifts
+toward the prior mean. With `node_neighborhood`, the search has two parts, as GSLIB's `sstrat = 0`: `neighborhood`
+selects the original data, with the observations' group identities (so a per-hole cap applies) and its minimum, and
+`node_neighborhood` selects the nodes already simulated (its `max_samples` is GSLIB's `ncnode`); the kriging system is
+their union. GSLIB's example uses 8 data and 12 nodes. When both parts take everything, the two-part draw equals the
+single one exactly. On a line of 40 nodes 40 m from four data holes under a short and a long nested structure, a
+single search of 8 pulls the ensemble mean toward zero (0.89 against a dense conditional mean of 1.24), while 8 data
+and 8 nodes searched apart keep it at 0.99. In Sondara's experiment on the Rocklea Dome test holes of its
+hole-group split (Fe, 1 m samples, 32 realizations), 24 data (at most 6 per hole) and 12 nodes lowered the E-type
+RMSE from 16.42 to 15.11 wt% against a single search of 24.
+
 **Ensemble statistics are native.** The E-type mean, quantiles and exceedance frequencies are computed from the native
 realizations. Back-transforming the Gaussian mean is not the native mean for a skewed variable, and the tests check
 that the two differ. SGS conditions on support centroids (the point-support approximation), and it is the CPU
@@ -96,12 +109,20 @@ realizations can run in parallel.
 | Normal scores | the mid-rank definition | exact for distinct, tied and weighted values; round trip at the knots |
 | Tails | bounded and declared policies | clipped to the extrema by default; extended only through declared knots |
 | Full-neighbourhood SGS | the dense conditional Cholesky draw | equal within 1e-10 from the recorded innovations |
+| Two-part search taking everything | the single search | equal exactly |
+| Two-part search, data part | the grouped data selection at the first node of each path | the same system, at most 2 per group, mean within 1e-12 |
+| Two-part search where nodes crowd the data out | the dense conditional mean on a 40-node line | mean error lower by more than 0.05 than a single search of the same size |
 | Ensemble moments | the dense conditional mean and covariance, 4,000 realizations | within 0.05 and 0.06 |
 | Hard data and seeds | the data | honoured exactly; the same seed reproduces, another differs |
 | E-type mean | native ensemble mean | equal to it, and different from a back-transformed Gaussian mean |
 
 ## References
 
+- Deutsch, C. V. and Journel, A. G. *GSLIB: Geostatistical Software Library and User's Guide*, 2nd ed. Oxford
+  University Press, New York (1998), ISBN 0-19-510015-8; the SGSIM parameters `ndmax`, `ncnode` and `sstrat`,
+  http://www.gslib.com/gslib_help/sgsim.html
+- Isatis technical reference, Sequential Gaussian Simulations: data and already simulated nodes with separate maximum
+  counts, https://docs.dataminesoftware.com/IsatisNeo/Latest/Isatis-Tech-Refs/SGS.html
 - Journel, A. G. Nonparametric estimation of spatial distributions. *Journal of the International Association for
   Mathematical Geology* 15, 445-468 (1983). doi:10.1007/BF01031292
 - Best, M. J. and Chakravarti, N. Active set algorithms for isotonic regression; a unifying framework. *Mathematical

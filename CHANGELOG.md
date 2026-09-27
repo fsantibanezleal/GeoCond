@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.07.000] - 2026-09-27
+
+### Added
+
+- `sequential_gaussian(..., node_neighborhood=...)`: a two-part search, as GSLIB's `sstrat = 0`. The original data
+  are selected by `neighborhood` with the observations' group identities (a per-group cap and the minimum apply to
+  them), and the nodes already simulated by `node_neighborhood` (GSLIB's `ncnode`). Without it, the single search over
+  data and nodes is unchanged, and group limits are now refused with a message instead of failing inside the search.
+  Found by Sondara: along held-out drillholes, dense simulated nodes crowded the training holes out of a single
+  search of 24; 24 data and 12 nodes lowered the E-type RMSE of Rocklea Fe from 16.42 to 15.11 wt%.
+- `SimulationResult.node_neighborhood` records the node part of the search.
+
 ## [0.06.002] - 2026-09-27
 
 ### Fixed
