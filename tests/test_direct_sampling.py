@@ -10,7 +10,7 @@ from geocond.validation import CancelledError, ValidationError
 
 
 def oracle(ti, shape, kinds, hard=None, active=None, ti_mask=None, max_neighbors=24, radius=math.inf, threshold=0.0,
-           scan_fraction=1.0, seed=0, distance_power=0.0):
+           scan_fraction=1.0, seed=0, distance_power=0.0, zones=None):
     """The documented definition, one candidate at a time in plain Python loops."""
     ti = np.asarray(ti, float)
     if ti.ndim == 3:
@@ -32,7 +32,6 @@ def oracle(ti, shape, kinds, hard=None, active=None, ti_mask=None, max_neighbors
     path = nodes[np.random.default_rng([seed, 0]).permutation(len(nodes))]
     informed = [(tuple(c), int(np.ravel_multi_index(tuple(c), shape, order="F"))) for c in np.argwhere(is_hard)]
     chosen_ids = {}
-    max_scan = max(1, math.ceil(scan_fraction * len(centers)))
     for node in path:
         x = np.unravel_index(node, shape, order="F")
         cand = sorted(((math.dist(c, x), fid, c) for c, fid in informed), key=lambda t: (t[0], t[1]))
@@ -41,10 +40,12 @@ def oracle(ti, shape, kinds, hard=None, active=None, ti_mask=None, max_neighbors
         data = [sim[c] for _, _, c in cand]
         raw = [math.hypot(*d) ** (-distance_power) if distance_power else 1.0 for d in offsets]
         w = [r / sum(raw) for r in raw]
-        order = np.random.default_rng([seed, 1, int(node)]).permutation(len(centers))
+        pool = centers if zones is None else [c for c in centers if zones[0][c] == zones[1][x]]
+        order = np.random.default_rng([seed, 1, int(node)]).permutation(len(pool))
+        max_scan = max(1, math.ceil(scan_fraction * len(pool))) if pool else 0
         pick, best, best_score = None, None, math.inf
         for pos in order[:max_scan]:
-            c = centers[pos]
+            c = pool[pos]
             ok = True
             tv = []
             for d in offsets:
@@ -119,8 +120,71 @@ def test_continuous_and_multivariate_scores_follow_the_definition():
     assert_same_as_oracle(out, sim, ids)
 
 
+@pytest.mark.parametrize("seed", [0, 3])
+def test_zones_follow_the_definition(seed):
+    ti = tiny_ti()
+    ti_zones = np.broadcast_to(np.arange(2)[None, None, :], ti.shape[:3]).astype(int)  # one zone per layer
+    grid_zones = np.broadcast_to(np.arange(2)[None, None, :], (5, 4, 2)).astype(int)
+    hard = (np.array([[0, 0, 0], [3, 2, 1]]), np.array([2.0, 0.0]))
+    kw = {"max_neighbors": 5, "threshold": 0.2, "scan_fraction": 0.6, "seed": seed}
+    out = direct_sampling(ti, (5, 4, 2), variable_kinds=["categorical"], hard_data=hard, zones=(ti_zones, grid_zones),
+                          **kw)
+    sim, ids = oracle(ti, (5, 4, 2), ["categorical"], hard=hard, zones=(ti_zones, grid_zones), **kw)
+    assert_same_as_oracle(out, sim, ids)
+    assert out.parameters["zones"] == {"0": 42, "1": 42}
+
+
+def test_zones_confine_candidates_and_one_zone_is_the_unzoned_engine():
+    ti = channel_ti(40, 40)
+    shape = (24, 20, 1)
+    kw = {"variable_kinds": ["categorical"], "max_neighbors": 12, "threshold": 0.1, "scan_fraction": 0.5, "seed": 7}
+    plain = direct_sampling(ti, shape, **kw)
+    one = direct_sampling(ti, shape, zones=(np.zeros((40, 40, 1), int), np.zeros(shape, int)), **kw)
+    assert np.array_equal(plain.candidate, one.candidate) and np.array_equal(plain.realization, one.realization)
+    ti_zones = (np.arange(40)[None, :, None] // 10) * np.ones((40, 1, 1), int)  # four bands along y
+    grid_zones = (np.arange(20)[None, :, None] // 5) * np.ones((24, 1, 1), int)
+    banded = direct_sampling(ti, shape, zones=(ti_zones, grid_zones), **kw)
+    simulated = np.argwhere(banded.candidate >= 0)
+    assert len(simulated) == np.prod(shape)
+    for i, j, k in simulated:
+        c = np.unravel_index(banded.candidate[i, j, k], ti.shape[:3], order="F")
+        assert ti_zones[c] == grid_zones[i, j, k]
+
+
+def test_a_layered_prior_keeps_its_order_only_with_zones():
+    """Five units of four layers with sparse lenses of the unit two layers up. With few neighbours a mid-depth node is
+    ambiguous, so without zones the unconditioned grid loses the order; scanning each layer's own TI layer keeps it."""
+    rng = np.random.default_rng(4)
+    codes = np.repeat(np.arange(5)[::-1].astype(float), 4)
+    ti = codes[None, None, :] * np.ones((30, 30, 1))
+    ti = np.where(rng.random(ti.shape) < 0.08, np.roll(ti, 2, axis=2), ti)
+    layers = np.broadcast_to(np.arange(20)[None, None, :], ti.shape).astype(int)
+    shape = (12, 12, 20)
+    grid_layers = np.broadcast_to(np.arange(20)[None, None, :], shape).astype(int)
+    kw = {"variable_kinds": ["categorical"], "max_neighbors": 4, "threshold": 0.0, "scan_fraction": 0.3, "seed": 1}
+    zoned = direct_sampling(ti[..., None], shape, zones=(layers, grid_layers), **kw).realization[..., 0]
+    free = direct_sampling(ti[..., None], shape, **kw).realization[..., 0]
+    ti_agree = np.mean(ti == codes)
+    assert abs(np.mean(zoned == codes) - ti_agree) < 0.02  # 0.957 against the TI's 0.959
+    assert np.mean(free == codes) < 0.5  # 0.161
+
+
+def test_an_empty_zone_leaves_its_nodes_failed_and_zones_are_validated():
+    ti = channel_ti(20, 20)
+    grid_zones = np.zeros((6, 4, 1), int)
+    grid_zones[:, 2:] = 9  # no TI centre has zone 9
+    out = direct_sampling(ti, (6, 4, 1), variable_kinds=["categorical"], seed=1,
+                          zones=(np.zeros((20, 20, 1), int), grid_zones))
+    assert out.failed[:, 2:].all() and not out.failed[:, :2].any() and not out.complete
+    with pytest.raises(ValidationError, match="ti_zones must have the shape"):
+        direct_sampling(ti, (6, 4, 1), variable_kinds=["categorical"], zones=(np.zeros((5, 5, 1), int), grid_zones))
+    with pytest.raises(ValidationError, match="integers"):
+        direct_sampling(ti, (6, 4, 1), variable_kinds=["categorical"],
+                        zones=(np.zeros((20, 20, 1)), grid_zones))
+
+
 @pytest.mark.cuda
-@pytest.mark.parametrize("case", ["categorical", "continuous", "masked"])
+@pytest.mark.parametrize("case", ["categorical", "continuous", "masked", "zoned"])
 def test_cuda_selects_the_same_candidate_as_the_reference(case):
     torch = pytest.importorskip("torch")
     if not torch.cuda.is_available():
@@ -142,6 +206,9 @@ def test_cuda_selects_the_same_candidate_as_the_reference(case):
     shape = (16, 12, 1) if case != "continuous" else (10, 8, 2)
     kw = {"variable_kinds": kinds, "ti_mask": ti_mask, "active_mask": active, "max_neighbors": 12, "threshold": 0.1,
               "scan_fraction": 0.4, "seed": 5, "candidate_chunk": 97}
+    if case == "zoned":
+        kw["zones"] = ((np.arange(30)[None, :, None] // 10) * np.ones((30, 1, 1), int),
+                       (np.arange(12)[None, :, None] // 4) * np.ones((16, 1, 1), int))
     a = direct_sampling(ti, shape, **kw)
     b = direct_sampling(ti, shape, backend="torch", **kw)
     assert np.array_equal(a.candidate, b.candidate)

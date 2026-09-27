@@ -42,6 +42,23 @@ how many candidates were examined; the result records the path, the hard-data an
 completed. Array axes are (x, y, z[, variable]). The TI and the grid share cell size and orientation; rotating or
 scaling a TI is a model intervention this function does not perform.
 
+## Zones: a nonstationary prior, scanned zone by zone
+
+A training image is a stationary model: a first-match search finds a pattern anywhere in it. When the prior is not
+stationary (a layered cover whose units sit at known depths), a node far from conditioning data can copy a pattern
+from the wrong depth. Mariethoz, Renard and Straubhaar (2010, section 6) handle this by "scanning a different part of
+a TI or different TIs for each simulated zone". `zones=(ti_zones, grid_zones)` gives an integer zone to every TI cell
+and every grid cell; a node's candidates are the valid TI centres of its own zone, visited in a seeded permutation of
+that zone, and the scan fraction applies to the zone's count. A zone with no valid centre leaves its nodes failed. One
+zone everywhere is the unzoned engine exactly, and the PyTorch backend selects the same candidates, since zones change
+only the candidate list and never the scoring.
+
+On a training image of five units of four layers each (30 x 30 x 20 cells, 8 % lenses of the unit two layers up) and
+an unconditioned 12 x 12 x 20 grid with four neighbours, the zoned realization agrees with the layer order at 0.957
+of its cells, against 0.959 in the TI itself; without zones it agrees at 0.161. With a thin grid (six layers) the
+unzoned engine keeps the order anyway (0.906 against 0.917), because a candidate whose pattern would leave the TI is
+skipped, which anchors nodes near the top and bottom: zones matter where the grid is deep and the data event short.
+
 ## CPU and CUDA: the same candidate, and when each is faster
 
 The CUDA scorer evaluates a chunk of candidates in parallel but takes the earliest acceptable one in the node's order,
@@ -73,7 +90,9 @@ one stale context would be a different algorithm and is not offered.
 | Question | Result |
 |---|---|
 | Does the NumPy engine follow the definition? | identical realization and candidate for every node against a plain-Python enumeration of the definition, for categorical, continuous, multivariate and distance-weighted cases |
-| Does CUDA select the same candidate? | identical candidates, realizations, scores, fallbacks and scan counts, categorical, continuous and masked (run locally; CI has no GPU) |
+| Does CUDA select the same candidate? | identical candidates, realizations, scores, fallbacks and scan counts, categorical, continuous, masked and zoned (run locally; CI has no GPU) |
+| Do zones follow the definition? | identical realization and candidate for every node against the plain-Python enumeration with zones; one zone equals the unzoned engine; every candidate lies in its node's zone; an empty zone leaves its nodes failed |
+| Do zones keep a layered prior's order? | 0.957 of the cells in order with zones, 0.161 without, against 0.959 in the TI |
 | Are copied values distributed as the TI's conditional frequencies? | 1,500 single-node draws within four binomial standard errors of the TI's frequency |
 | Does a mismatch equal to the threshold qualify? | yes at 0.25; at 0.2499 the node falls back after scanning the whole TI |
 | Fallback, a missing-cell TI mask, a one-category TI, domain masks, hard data and conflicts | recorded fallback; failed and incomplete; one category everywhere; inactive cells unwritten; hard data exact; conflicts and absent categories refused |

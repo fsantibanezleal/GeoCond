@@ -11,7 +11,7 @@ pip install "geocond[cuda]"        # plus PyTorch for the CUDA Direct Sampling s
 
 ## Status
 
-Version 0.07.000. Each capability below is implemented, tested against an independent reference, and documented; the
+Version 0.08.000. Each capability below is implemented, tested against an independent reference, and documented; the
 rest of the planned core is listed after it and is not claimed.
 
 | Capability | Module | Checked against | Documentation |

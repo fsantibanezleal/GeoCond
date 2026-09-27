@@ -1,6 +1,6 @@
 """Support-aware spatial conditioning; see the versioned API contract."""
 
-__version__ = "0.07.000"
+__version__ = "0.08.000"
 
 from .baselines import inverse_distance, nearest_neighbour
 from .compositing import Composite, composite_categories, composite_intervals, fixed_boundaries
