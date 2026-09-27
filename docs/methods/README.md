@@ -13,5 +13,8 @@ what the tests establish against independent references, and the sources.
    with its order correction, the normal-score transform and its tails, and sequential Gaussian simulation.
 5. [Direct Sampling](05_direct_sampling.md): the definition shared by the CPU reference and the CUDA scorer, candidate
    provenance, fallback, and a recorded benchmark of when each backend is faster.
+6. [Trajectories, supports and compositing](06_geometry_and_compositing.md): the coordinate convention, minimum
+   curvature with arc interpolation and explicit extensions, known sampling supports and their quadrature, and
+   length-weighted and categorical compositing that keeps the sampled length.
 
 The contract for the methods not yet implemented is in [the API contract](../api-contract.md).

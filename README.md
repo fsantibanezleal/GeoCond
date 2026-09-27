@@ -11,14 +11,14 @@ pip install "geocond[cuda]"        # plus PyTorch for the CUDA Direct Sampling s
 
 ## Status
 
-Version 0.06.000. Each capability below is implemented, tested against an independent reference, and documented; the
+Version 0.06.001. Each capability below is implemented, tested against an independent reference, and documented; the
 rest of the planned core is listed after it and is not claimed.
 
 | Capability | Module | Checked against | Documentation |
 |---|---|---|---|
-| Minimum-curvature trajectories from collar and survey stations | `geometry` | analytic endpoints | [API contract](docs/api-contract.md) |
-| Known sampling supports and Gauss-Legendre quadrature | `support` | analytic integrals | [API contract](docs/api-contract.md) |
-| Conservative interval compositing, continuous and categorical | `compositing` | exact conservation | [API contract](docs/api-contract.md) |
+| Minimum-curvature trajectories from collar and survey stations | `geometry` | analytic endpoints and welleng 0.29.1 (within 1e-9 of the path length) | [Trajectories, supports and compositing](docs/methods/06_geometry_and_compositing.md) |
+| Known sampling supports and Gauss-Legendre quadrature | `support` | analytic integrals | [Trajectories, supports and compositing](docs/methods/06_geometry_and_compositing.md) |
+| Conservative interval compositing, continuous and categorical | `compositing` | exact conservation | [Trajectories, supports and compositing](docs/methods/06_geometry_and_compositing.md) |
 | Nested covariance: exponential, spherical and Gaussian families, geometric anisotropy, the linear model of coregionalization with full-spectrum PSD checks, process nugget | `covariance` | R/gstat 2.1-6 evaluated LMC covariances (within 2e-10) | [Covariance models](docs/methods/01_covariance.md) |
 | Range conventions of gstat, PyKrige and GSTools | `conventions` | each library's own evaluated functions | [Covariance models](docs/methods/01_covariance.md) |
 | Experimental direct and cross variograms: directions, angle tolerance, bandwidth, downhole pairs, classical and Cressie-Hawkins estimators, seeded pair sampling, retained pairs | `variogram` | an all-pair enumeration and GSTools 1.7.0 (identical bins) | [Variograms and fitting](docs/methods/02_variograms.md) |

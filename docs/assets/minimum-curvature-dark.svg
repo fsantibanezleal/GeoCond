@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="410" viewBox="0 0 760 410" role="img" aria-labelledby="t d">
+  <title id="t">Minimum-curvature desurvey</title>
+  <desc id="d">A three-station survey drawn in its north-vertical plane: the circular arcs of minimum curvature through the stations, the dashed chords between them, and at half-way measured depth the arc position used by GeoCond next to the chord midpoint it does not use.</desc>
+  <style>
+    .t { font: 600 15px 'Segoe UI', Helvetica, Arial, sans-serif; fill: #c9d1d9; }
+    .b { font: 13px 'Segoe UI', Helvetica, Arial, sans-serif; fill: #c9d1d9; }
+    .m { font: 12px 'Segoe UI', Helvetica, Arial, sans-serif; fill: #8b949e; }
+  </style>
+  <rect width="760" height="410" fill="#0d1117"/>
+  <text class="t" x="24" y="30">Minimum curvature: positions between stations lie on the arc, not on the chord</text>
+  <line x1="90.0" y1="70.0" x2="90.0" y2="338.8" stroke="#30363d"/>
+  <text class="m" x="82.0" y="342.8" text-anchor="end">z</text>
+  <line x1="90.0" y1="70.0" x2="415.0" y2="70.0" stroke="#30363d"/>
+  <text class="m" x="415.0" y="62.0" text-anchor="end">north</text>
+  <path d="M90.0,70.0 L91.5,70.7 L93.0,71.4 L94.4,72.1 L95.9,72.8 L97.4,73.6 L98.8,74.3 L100.3,75.0 L101.7,75.8 L103.2,76.6 L104.6,77.3 L106.0,78.1 L107.5,78.9 L108.9,79.7 L110.3,80.5 L111.7,81.3 L113.1,82.1 L114.6,82.9 L116.0,83.8 L117.4,84.6 L118.8,85.5 L120.1,86.3 L121.5,87.2 L122.9,88.1 L124.3,88.9 L125.7,89.8 L127.0,90.7 L128.4,91.6 L129.7,92.5 L131.1,93.5 L132.4,94.4 L133.8,95.3 L135.1,96.3 L136.4,97.2 L137.7,98.2 L139.1,99.1 L140.4,100.1 L141.7,101.1 L143.0,102.1 L144.3,103.1 L145.6,104.1 L146.8,105.1 L148.1,106.1 L149.4,107.1 L150.7,108.2 L151.9,109.2 L153.2,110.3 L154.4,111.3 L155.7,112.4 L156.9,113.4 L158.1,114.5 L159.3,115.6 L160.6,116.7 L161.8,117.8 L163.0,118.9 L164.2,120.0 L165.4,121.1 L166.6,122.2 L167.7,123.4 L168.9,124.5 L170.1,125.7 L171.2,126.8 L172.4,128.0 L173.5,129.1 L174.7,130.3 L175.8,131.5 L176.9,132.6 L178.1,133.8 L179.2,135.0 L180.3,136.2 L181.4,137.4 L182.5,138.7 L183.5,139.9 L184.6,141.1 L185.7,142.3 L186.8,143.6 L187.8,144.8 L188.9,146.1 L189.9,147.3 L190.9,148.6 L192.0,149.9 L193.0,151.1 L194.0,152.4 L195.0,153.7 L196.0,155.0 L197.0,156.3 L198.0,157.6 L199.0,158.9 L199.9,160.2 L200.9,161.5 L201.9,162.9 L202.8,164.2 L203.7,165.5 L204.7,166.9 L205.6,168.2 L206.5,169.6 L207.4,170.9 L208.3,172.3 L209.2,173.6 L210.1,175.0 L211.0,176.4 L211.9,177.8 L212.8,179.1 L213.6,180.5 L214.5,181.9 L215.3,183.3 L216.2,184.7 L217.0,186.1 L217.9,187.5 L218.7,188.9 L219.5,190.3 L220.3,191.7 L221.1,193.2 L221.9,194.6 L222.7,196.0 L223.5,197.5 L224.3,198.9 L225.0,200.3 L225.8,201.8 L226.6,203.2 L227.3,204.7 L228.0,206.1 L228.8,207.6 L229.5,209.1 L230.2,210.5 L230.9,212.0 L231.6,213.5 L232.3,214.9 L233.0,216.4 L233.7,217.9 L234.4,219.4 L235.1,220.9 L235.7,222.4 L236.4,223.9 L237.0,225.4 L237.7,226.9 L238.3,228.4 L238.9,229.9 L239.5,231.4 L240.1,232.9 L240.7,234.4 L241.3,236.0 L241.9,237.5 L242.5,239.0 L243.1,240.5 L243.6,242.1 L244.2,243.6 L244.8,245.1 L245.3,246.7 L245.8,248.2 L246.4,249.8 L246.9,251.3 L247.4,252.9 L247.9,254.4 L248.4,256.0 L248.9,257.5 L249.4,259.1 L249.8,260.7 L250.3,262.2 L250.8,263.8 L251.2,265.4 L251.7,266.9 L252.1,268.5 L252.5,270.1 L253.0,271.7 L253.4,273.2 L253.8,274.8 L254.2,276.4 L254.6,278.0 L254.9,279.6 L255.3,281.2 L255.7,282.8 L256.0,284.3 L256.4,285.9 L256.7,287.5 L257.1,289.1 L257.4,290.7 L257.7,292.3 L258.0,293.9 L258.3,295.5 L258.6,297.2 L258.9,298.8 L259.2,300.4 L259.5,302.0 L259.7,303.6 L260.0,305.2 L260.2,306.8 L260.5,308.4 L260.7,310.0 L261.0,311.7 L261.2,313.3 L261.4,314.9 L261.6,316.5 L261.8,318.1 L262.0,319.8 L262.1,321.4 L262.3,323.0 L262.5,324.6 L262.6,326.3 L262.8,327.9" fill="none" stroke="#58a6ff" stroke-width="3"/>
+  <line x1="90.0" y1="70.0" x2="203.6" y2="165.3" stroke="#f0883e" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <line x1="203.6" y1="165.3" x2="262.8" y2="327.9" stroke="#f0883e" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <circle cx="90.0" cy="70.0" r="6" fill="#58a6ff"/>
+  <text class="b" x="102.0" y="74.0">collar, MD 0</text>
+  <circle cx="203.6" cy="165.3" r="6" fill="#58a6ff"/>
+  <text class="b" x="215.6" y="169.3">station, MD 120</text>
+  <circle cx="262.8" cy="327.9" r="6" fill="#58a6ff"/>
+  <text class="b" x="274.8" y="331.9">station, MD 260</text>
+  <circle cx="153.1" cy="110.2" r="4.5" fill="#3fb950"/>
+  <circle cx="146.8" cy="117.7" r="4.5" fill="none" stroke="#f0883e" stroke-width="2"/>
+  <circle cx="243.9" cy="242.7" r="4.5" fill="#3fb950"/>
+  <circle cx="233.2" cy="246.6" r="4.5" fill="none" stroke="#f0883e" stroke-width="2"/>
+  <circle cx="440" cy="300" r="4.5" fill="#3fb950"/><text class="b" x="452" y="304">MD half-way, on the arc</text>
+  <circle cx="440" cy="324" r="4.5" fill="none" stroke="#f0883e" stroke-width="2"/><text class="b" x="452" y="328">chord midpoint (not used)</text>
+  <text class="m" x="24" y="372">Stations at azimuth 0 with dips -25, -55 and -85 degrees. Between the last two stations the half-way point on the arc</text>
+  <text class="m" x="24" y="390">is 9.11 m from the chord midpoint; straight-chord interpolation would move every interval centre by up to that much.</text>
+</svg>
