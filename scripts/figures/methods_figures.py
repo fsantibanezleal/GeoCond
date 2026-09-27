@@ -101,11 +101,51 @@ def tolerance(p):
                "\n".join(parts) + "\n", p)
 
 
+def supports(p):
+    """A point observation, a line interval and a block target, each with its quadrature, and the nugget rule."""
+    from numpy.polynomial.legendre import leggauss
+
+    parts = ['  <text class="t" x="24" y="30">Support-integrated covariance: every support is a known sampling measure</text>']
+    # point observation
+    parts.append(f'  <circle cx="110" cy="170" r="7" fill="{p["a"]}"/>')
+    parts.append('  <text class="b" x="70" y="215">point observation</text>')
+    parts.append('  <text class="m" x="70" y="233">one node, weight 1, discrete</text>')
+    # line interval with Gauss nodes
+    nodes, weights = leggauss(6)
+    x0, y0, x1, y1 = 250, 80, 330, 260
+    parts.append(f'  <line x1="{x0}" y1="{y0}" x2="{x1}" y2="{y1}" stroke="{p["b"]}" stroke-width="3"/>')
+    for n, w in zip(nodes, weights, strict=True):
+        u = (n + 1) / 2
+        parts.append(f'  <circle cx="{x0 + u * (x1 - x0):.1f}" cy="{y0 + u * (y1 - y0):.1f}" r="{3 + 9 * w / 2:.1f}" fill="{p["b"]}"/>')
+    parts.append('  <text class="b" x="215" y="285">composite interval</text>')
+    parts.append('  <text class="m" x="215" y="303">Gauss nodes, continuous</text>')
+    # block target with a 3 by 3 plan of nodes
+    bx, by, size = 470, 90, 160
+    parts.append(f'  <rect x="{bx}" y="{by}" width="{size}" height="{size}" fill="{p["fill"]}" fill-opacity="0.10" stroke="{p["c"]}" stroke-width="2"/>')
+    nodes, weights = leggauss(3)
+    for nx, wx in zip(nodes, weights, strict=True):
+        for ny, wy in zip(nodes, weights, strict=True):
+            parts.append(f'  <circle cx="{bx + (nx + 1) / 2 * size:.1f}" cy="{by + (ny + 1) / 2 * size:.1f}" r="{3 + 5 * wx * wy:.1f}" fill="{p["c"]}"/>')
+    parts.append('  <text class="b" x="470" y="285">block target</text>')
+    parts.append('  <text class="m" x="470" y="303">product Gauss rule, continuous</text>')
+    # averaging arrows
+    for (xa, ya), (xb, yb) in (((118, 168), (262, 120)), ((336, 200), (468, 170)), ((118, 172), (468, 200))):
+        parts.append(f'  <line x1="{xa}" y1="{ya}" x2="{xb}" y2="{yb}" stroke="{p["muted"]}" stroke-dasharray="5 4"/>')
+    parts.append('  <text class="m" x="24" y="340">C(S, T) = sum over nodes p of S and q of T of w_p w_q C(y_q - x_p). The process nugget enters only between two</text>')
+    parts.append('  <text class="m" x="24" y="358">discrete supports at coincident nodes: a point keeps it, a continuous interval or block integrates it to zero.</text>')
+    return svg(700, 380, "Support-integrated covariance",
+               "A point observation, a composite interval with its Gauss nodes and a block target with a product Gauss "
+               "rule; covariance between supports averages the model over their nodes, and the process nugget survives "
+               "only between discrete supports at coincident nodes.",
+               "\n".join(parts) + "\n", p)
+
+
 def main():
     ASSETS.mkdir(parents=True, exist_ok=True)
     for mode, palette in PALETTES.items():
         (ASSETS / f"correlation-families-{mode}.svg").write_text(families(palette), encoding="utf-8", newline="\n")
         (ASSETS / f"directional-bin-{mode}.svg").write_text(tolerance(palette), encoding="utf-8", newline="\n")
+        (ASSETS / f"support-integration-{mode}.svg").write_text(supports(palette), encoding="utf-8", newline="\n")
     print("written to", ASSETS)
 
 
