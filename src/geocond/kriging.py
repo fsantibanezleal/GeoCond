@@ -367,7 +367,10 @@ def predict(
         A = np.block([[C, F], [F.T, np.zeros((F.shape[1], F.shape[1]))]])
         x = np.vstack([W, lam])
         rhs = np.vstack([c, f0])
-        linear_residual = float(np.linalg.norm(A @ x - rhs) / (np.linalg.norm(A) * np.linalg.norm(x) + np.linalg.norm(rhs)))
+        # A zero denominator means zero weights and a zero right-hand side (simple kriging beyond every range): the
+        # residual of that exact solve is zero, not 0/0.
+        scale = np.linalg.norm(A) * np.linalg.norm(x) + np.linalg.norm(rhs)
+        linear_residual = float(np.linalg.norm(A @ x - rhs) / scale) if scale > 0 else 0.0
         constraint_residual = float(np.max(np.abs(F.T @ W - f0))) if F.shape[1] else 0.0
         eig = np.linalg.eigvalsh(C)
         out_mean[ti] = prediction

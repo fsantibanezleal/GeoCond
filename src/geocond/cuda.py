@@ -153,7 +153,9 @@ def solve_batch_torch(torch, dev, model, method, X, V, Z, E, T, tv, means, max_c
         m = torch.as_tensor(means, dtype=torch.float64, device=dev)
         pred = m[list(tv)][None, :] + torch.einsum("bnk,bn->bk", W, z - m[v])
         resid = torch.zeros(B, dtype=torch.float64, device=dev)
-        lin = torch.linalg.matrix_norm(C @ W - c) / (torch.linalg.matrix_norm(C) * torch.linalg.matrix_norm(W) + torch.linalg.matrix_norm(c))
+        scale = torch.linalg.matrix_norm(C) * torch.linalg.matrix_norm(W) + torch.linalg.matrix_norm(c)
+        lin = torch.where(scale > 0, torch.linalg.matrix_norm(C @ W - c) / torch.where(scale > 0, scale, 1.0),
+                          torch.zeros_like(scale))
     else:
         present = list(range(p))
         F = torch.stack([(v == a).to(torch.float64) for a in present], dim=2)  # (B, n, p); absent columns are zero
@@ -171,7 +173,8 @@ def solve_batch_torch(torch, dev, model, method, X, V, Z, E, T, tv, means, max_c
         pred = torch.einsum("bnk,bn->bk", W, z)
         top = C @ W + F @ lam - c
         lin = torch.sqrt(torch.linalg.matrix_norm(top) ** 2 + torch.linalg.matrix_norm(F.transpose(1, 2) @ W - torch.where(has[:, :, None], f0, torch.zeros_like(f0))) ** 2)
-        lin = lin / (torch.linalg.matrix_norm(C) * torch.linalg.matrix_norm(W) + torch.linalg.matrix_norm(c))
+        scale = torch.linalg.matrix_norm(C) * torch.linalg.matrix_norm(W) + torch.linalg.matrix_norm(c)
+        lin = torch.where(scale > 0, lin / torch.where(scale > 0, scale, 1.0), torch.zeros_like(scale))
         resid = torch.amax(torch.abs(F.transpose(1, 2) @ W - torch.where(has[:, :, None], f0, torch.zeros_like(f0))),
                            dim=(1, 2))
     err = C00[None] - W.transpose(1, 2) @ c - c.transpose(1, 2) @ W + W.transpose(1, 2) @ C @ W
