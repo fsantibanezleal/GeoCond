@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.05.000] - 2026-09-26
+
+### Added
+
+- `direct_sampling`: conditional Direct Sampling from a training image for categorical and continuous variables, with
+  a seeded path, a uniform candidate permutation per node, weighted mismatch fractions, first-match acceptance
+  (threshold inclusive), best-scanned fallback, masks for the TI and the domain, exact hard data with conflict and
+  category checks, and per-cell candidate, score, fallback and scan records. The same definition runs as a NumPy
+  reference and as a PyTorch CUDA scorer that selects the same candidates with bit-identical scores.
+- `scripts/benchmark_direct_sampling.py` and its recorded result: on the tested sizes the CUDA scorer is a validated
+  equal, faster in two of five cases and slower in the others.
+- Docs: the Direct Sampling page with a figure of a real TI and three conditional realizations.
+
+### Fixed
+
+- The `cuda` extra required `torch>=2.14`, which does not exist (the latest CUDA build is 2.11.0), so
+  `pip install geocond[cuda]` could not resolve; it now requires `torch>=2.9,<3`.
+
 ## [0.04.000] - 2026-09-26
 
 ### Added

@@ -1,0 +1,67 @@
+{
+ "cpu": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+ "gpu": "NVIDIA GeForce RTX 4070 Laptop GPU",
+ "torch": "2.11.0+cu128",
+ "numpy": "2.5.3",
+ "chunks": {
+  "numpy": 1024,
+  "torch": 65536
+ },
+ "rows": [
+  {
+   "case": "categorical channels, TI 64x64x1, grid 32x32x1, threshold 0, full scan",
+   "nodes": 1024,
+   "numpy_s": 1.24,
+   "cuda_s": 3.67,
+   "same_candidates": true,
+   "same_scores": true,
+   "mean_scanned": 713,
+   "valid_centers": 4096,
+   "fallbacks": 146
+  },
+  {
+   "case": "categorical channels, TI 128x128x1, grid 32x32x1, threshold 0, full scan",
+   "nodes": 1024,
+   "numpy_s": 2.57,
+   "cuda_s": 2.28,
+   "same_candidates": true,
+   "same_scores": true,
+   "mean_scanned": 2266,
+   "valid_centers": 16384,
+   "fallbacks": 134
+  },
+  {
+   "case": "categorical channels, TI 40x40x40, grid 16x16x16, threshold 0, scan 0.25",
+   "nodes": 4096,
+   "numpy_s": 11.87,
+   "cuda_s": 15.06,
+   "same_candidates": true,
+   "same_scores": true,
+   "mean_scanned": 1683,
+   "valid_centers": 64000,
+   "fallbacks": 351
+  },
+  {
+   "case": "categorical channels, TI 64x64x64, grid 8x8x8, threshold 0, full scan",
+   "nodes": 512,
+   "numpy_s": 4.98,
+   "cuda_s": 4.84,
+   "same_candidates": true,
+   "same_scores": true,
+   "mean_scanned": 4710,
+   "valid_centers": 262144,
+   "fallbacks": 8
+  },
+  {
+   "case": "continuous smooth field, TI 64x64x16, grid 10x10x4, threshold 0.02, full scan",
+   "nodes": 400,
+   "numpy_s": 2.85,
+   "cuda_s": 1.88,
+   "same_candidates": true,
+   "same_scores": true,
+   "mean_scanned": 8830,
+   "valid_centers": 65536,
+   "fallbacks": 0
+  }
+ ]
+}
