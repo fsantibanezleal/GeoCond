@@ -1,6 +1,6 @@
 """Support-aware spatial conditioning; see the versioned API contract."""
 
-__version__ = "0.04.000"
+__version__ = "0.05.000"
 
 from .baselines import inverse_distance, nearest_neighbour
 from .compositing import Composite, composite_categories, composite_intervals, fixed_boundaries
@@ -13,6 +13,7 @@ from .covariance import (
     principal_frame,
     psd_matrix,
 )
+from .direct_sampling import DirectSamplingResult, direct_sampling
 from .geometry import Survey, TrajectorySamples, tangent
 from .kriging import Observations, PredictionBatch, predict, support_covariance
 from .neighborhood import Neighborhood
@@ -35,6 +36,7 @@ __all__ = [
     "Composite",
     "CovarianceComponent",
     "CovarianceModel",
+    "DirectSamplingResult",
     "ExperimentalVariogram",
     "IndicatorResult",
     "Neighborhood",
@@ -53,6 +55,7 @@ __all__ = [
     "composite_categories",
     "composite_intervals",
     "correlation",
+    "direct_sampling",
     "experimental_cross_variogram",
     "experimental_variogram",
     "fit_lmc",

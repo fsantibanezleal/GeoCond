@@ -227,6 +227,60 @@ def sgs(p):
                "\n".join(parts) + "\n", p)
 
 
+def _raster(parts, grid, x0, y0, cell, colour):
+    """Category-1 cells of a 2D grid as one rectangle per horizontal run (x right, y up)."""
+    nx, ny = grid.shape
+    for j in range(ny):
+        i = 0
+        while i < nx:
+            if grid[i, j] == 1:
+                start = i
+                while i < nx and grid[i, j] == 1:
+                    i += 1
+                parts.append(f'  <rect x="{x0 + start * cell:.2f}" y="{y0 + (ny - 1 - j) * cell:.2f}" '
+                             f'width="{(i - start) * cell:.2f}" height="{cell + 0.35:.2f}" fill="{colour}" '
+                             f'shape-rendering="crispEdges"/>')
+            else:
+                i += 1
+
+
+def ds(p):
+    """A real training image and three Direct Sampling realizations conditioned on the same hard data."""
+    from geocond.direct_sampling import direct_sampling
+
+    n = 64
+    x, y = np.meshgrid(np.arange(n), np.arange(n), indexing="ij")
+    ti = (np.sin(2 * np.pi * x / 12 + 1.2 * np.sin(2 * np.pi * y / 20)) > 0.3).astype(float)
+    rng = np.random.default_rng(5)
+    cells = rng.choice(32 * 32, size=14, replace=False)
+    hard_xyz = np.c_[cells % 32, cells // 32, np.zeros(14, int)]
+    crop = ti[16:48, 16:48]
+    hard = (hard_xyz, crop[hard_xyz[:, 0], hard_xyz[:, 1]])
+    reals = [direct_sampling(ti[..., None], (32, 32, 1), variable_kinds=["categorical"], hard_data=hard,
+                             max_neighbors=20, threshold=0.05, scan_fraction=0.5, seed=s).realization[:, :, 0, 0]
+             for s in (1, 2, 3)]
+    parts = ['  <text class="t" x="24" y="28">Direct Sampling: a training image and three conditional realizations</text>']
+    size = 160
+    panels = [("training image (64 x 64)", ti, 24)] + [(f"realization, seed {s}", r, 24 + (k + 1) * 186)
+                                                     for k, (s, r) in enumerate(zip((1, 2, 3), reals, strict=True))]
+    for title, grid, px in panels:
+        cell = size / grid.shape[0]
+        parts.append(f'  <rect x="{px}" y="50" width="{size}" height="{size}" fill="{p["bg"]}" stroke="{p["grid"]}"/>')
+        _raster(parts, grid, px, 50, cell, p["a"])
+        parts.append(f'  <text class="m" x="{px}" y="{50 + size + 18}">{title}</text>')
+        if grid.shape[0] == 32:
+            for (i, j, _), v in zip(hard_xyz, hard[1], strict=True):
+                cx, cy = px + (i + 0.5) * cell, 50 + (31 - j + 0.5) * cell
+                parts.append(f'  <circle cx="{cx:.1f}" cy="{cy:.1f}" r="3.2" fill="{p["b"] if v == 1 else p["bg"]}" '
+                             f'stroke="{p["b"]}" stroke-width="1.5"/>')
+    parts.append('  <text class="m" x="24" y="262">Circles are the 14 hard data (filled: channel, open: background), honoured in every realization; the channel</text>')
+    parts.append('  <text class="m" x="24" y="280">geometry between them is copied from the training image. Threshold 0.05, 20 neighbours, half the image scanned.</text>')
+    return svg(780, 300, "Direct Sampling realizations",
+               "A 64 by 64 categorical training image of meandering channels and three 32 by 32 Direct Sampling "
+               "realizations conditioned on the same fourteen hard data, which each realization honours.",
+               "\n".join(parts) + "\n", p)
+
+
 def main():
     ASSETS.mkdir(parents=True, exist_ok=True)
     for mode, palette in PALETTES.items():
@@ -235,6 +289,7 @@ def main():
         (ASSETS / f"support-integration-{mode}.svg").write_text(supports(palette), encoding="utf-8", newline="\n")
         (ASSETS / f"mik-correction-{mode}.svg").write_text(mik(palette), encoding="utf-8", newline="\n")
         (ASSETS / f"sgs-transect-{mode}.svg").write_text(sgs(palette), encoding="utf-8", newline="\n")
+        (ASSETS / f"direct-sampling-{mode}.svg").write_text(ds(palette), encoding="utf-8", newline="\n")
     print("written to", ASSETS)
 
 

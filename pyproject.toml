@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "geocond"
-version = "0.4.0"
+version = "0.5.0"
 description = "Support-aware spatial conditioning, covariance estimation and sequential simulation"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -14,7 +14,7 @@ dependencies = ["numpy>=2.5,<3", "scipy>=1.18,<2"]
 classifiers = ["Development Status :: 3 - Alpha", "Programming Language :: Python :: 3", "Topic :: Scientific/Engineering :: Mathematics"]
 
 [project.optional-dependencies]
-cuda = ["torch>=2.14,<3"]
+cuda = ["torch>=2.9,<3"]
 test = ["pytest>=9", "pytest-cov>=7"]
 reference = ["pykrige==1.7.3", "gstools==1.7.0", "welleng==0.29.1", "scikit-learn>=1.8,<2"]
 dev = ["build>=1.4", "ruff>=0.14", "twine>=6"]
