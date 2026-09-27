@@ -19,8 +19,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install the package, its test extras and the two parity references
-        run: pip install -e ".[test]" gstools==1.7.0 pykrige==1.7.3 ruff==0.16.6
+      - name: Install the package, its test extras and the parity references
+        run: pip install -e ".[test]" gstools==1.7.0 pykrige==1.7.3 "scikit-learn>=1.8,<2" ruff==0.16.6
       - name: Lint
         run: python -m ruff check src tests scripts
       - name: Tests, the parity tests against gstat fixtures, GSTools and PyKrige included
