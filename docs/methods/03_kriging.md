@@ -110,6 +110,19 @@ weight sum and contribution of each variable, the number of distinct holes, the 
 linear-system residual, the constraint residual, the covariance spectrum and condition number, the negative-weight
 mass, and any regularization applied.
 
+## The CUDA lane
+
+`backend="torch"` solves point-support simple and ordinary kriging and cokriging on a PyTorch device in float64.
+Neighbourhoods are chosen on the CPU by the same `Neighborhood`; the systems of all targets with the same number of
+neighbours are then assembled and solved as one batch (covariances on the device, a batched Cholesky factor, the
+ordinary constraints through the Schur complement), with the same condition limit and negative-variance rule and the
+same diagnostics. Measurement error is supported. Universal kriging, the jitter policy and integrated supports stay on
+NumPy, and asking the lane for them raises an error instead of quietly running something else.
+
+Measured against the reference: the gstat coupled cokriging cases agree within 1e-15 (within 5e-15 of gstat), and 3,000
+targets with 32 neighbours each from 4,000 observations agree within 1.2e-15, in 3.2 s against 5.5 s for NumPy; the
+neighbourhood search on the CPU is most of both times.
+
 ## Baselines
 
 `nearest_neighbour` and `inverse_distance` estimate from the same eligible observations with the same neighbourhood.

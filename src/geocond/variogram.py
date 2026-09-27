@@ -194,6 +194,37 @@ def _validate_common(coordinates, edges, direction, angle_tolerance, bandwidth, 
     return coordinates, edges, unit, angle_tolerance, bandwidth, group_array, depth_array
 
 
+def _torch_variogram(coordinates, a, c, edges, unit, angle_tolerance, bandwidth, estimator, cross, device):
+    """The same bins on the PyTorch float64 lane (full enumeration only)."""
+    from .cuda import variogram_pairs_torch
+
+    counts, seps, prods, roots, pairs, coincident = variogram_pairs_torch(
+        coordinates, a, c, edges, unit, angle_tolerance, bandwidth, device, True
+    )
+    with np.errstate(invalid="ignore", divide="ignore"):
+        separation = seps / counts
+        if estimator == "classical":
+            values_out = prods / (2.0 * counts)
+        else:
+            values_out = (roots / counts) ** 4 / (2.0 * (0.457 + 0.494 / counts + 0.045 / counts**2))
+    empty = counts == 0
+    separation[empty] = np.nan
+    values_out[empty] = np.nan
+    n = len(coordinates)
+    i, j, b = pairs
+    return ExperimentalVariogram(
+        edges, separation, counts, values_out, i, j, b, estimator, unit, angle_tolerance, bandwidth, False, cross,
+        n * (n - 1) // 2, False, None, coincident, {"backend": "torch"},
+    )
+
+
+def _check_torch(backend, downhole, max_pairs):
+    if backend not in ("numpy", "torch"):
+        raise ValidationError("backend must be 'numpy' or 'torch'")
+    if backend == "torch" and (downhole or max_pairs is not None):
+        raise ValidationError("the torch lane enumerates every spatial pair; downhole pairs and pair sampling run on numpy")
+
+
 def experimental_variogram(
     coordinates: ArrayLike,
     values: ArrayLike,
@@ -209,12 +240,15 @@ def experimental_variogram(
     max_pairs: int | None = None,
     seed: int = 0,
     cancel: Callable[[], bool] | None = None,
+    backend: str = "numpy",
+    device: str | None = None,
 ) -> ExperimentalVariogram:
     """The direct semivariogram of ``values`` at ``coordinates`` (n, 3) in the lag bins ``edges``.
 
     ``max_pairs`` draws a seeded uniform sample of the candidate pairs without replacement when the population is
     larger; the result records the population, the sample flag and the seed. Values must be finite: unknown values are
-    filtered by the caller, never read as zero.
+    filtered by the caller, never read as zero. ``backend='torch'`` enumerates every spatial pair on a PyTorch device
+    (``device``, CUDA when available) with the same membership rules.
     """
     if estimator not in ESTIMATORS:
         raise ValidationError(f"estimator must be one of {ESTIMATORS}")
@@ -224,6 +258,9 @@ def experimental_variogram(
     )
     if max_pairs is not None:
         max_pairs = integer(max_pairs, "max_pairs")
+    _check_torch(backend, downhole, max_pairs)
+    if backend == "torch":
+        return _torch_variogram(coordinates, z, z, edges, unit, angle_tolerance, bandwidth, estimator, False, device)
     i, j, b, sep, population, sampled, coincident = _pairs_into_bins(
         coordinates, edges, direction=unit, angle_tolerance=angle_tolerance, bandwidth=bandwidth,
         groups=group_array, downhole=downhole, depths=depth_array, max_pairs=max_pairs, seed=seed, cancel=cancel,
@@ -262,6 +299,8 @@ def experimental_cross_variogram(
     max_pairs: int | None = None,
     seed: int = 0,
     cancel: Callable[[], bool] | None = None,
+    backend: str = "numpy",
+    device: str | None = None,
 ) -> ExperimentalVariogram:
     """The classical cross semivariogram of two variables observed on the same supports (one coordinate per row,
     both values finite on every row). Variables on different supports are not paired by proximity: restrict them to
@@ -275,6 +314,9 @@ def experimental_cross_variogram(
     )
     if max_pairs is not None:
         max_pairs = integer(max_pairs, "max_pairs")
+    _check_torch(backend, downhole, max_pairs)
+    if backend == "torch":
+        return _torch_variogram(coordinates, a, c, edges, unit, angle_tolerance, bandwidth, "classical", True, device)
     i, j, b, sep, population, sampled, coincident = _pairs_into_bins(
         coordinates, edges, direction=unit, angle_tolerance=angle_tolerance, bandwidth=bandwidth,
         groups=group_array, downhole=downhole, depths=depth_array, max_pairs=max_pairs, seed=seed, cancel=cancel,
