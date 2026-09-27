@@ -10,7 +10,7 @@ pip install "geocond[reference]"   # plus the independent references the tests c
 
 ## Status
 
-Version 0.02.000. Each capability below is implemented, tested against an independent reference, and documented; the
+Version 0.03.000. Each capability below is implemented, tested against an independent reference, and documented; the
 rest of the planned core is listed after it and is not claimed.
 
 | Capability | Module | Checked against | Documentation |
@@ -22,10 +22,11 @@ rest of the planned core is listed after it and is not claimed.
 | Range conventions of gstat, PyKrige and GSTools | `conventions` | each library's own evaluated functions | [Covariance models](docs/methods/01_covariance.md) |
 | Experimental direct and cross variograms: directions, angle tolerance, bandwidth, downhole pairs, classical and Cressie-Hawkins estimators, seeded pair sampling, retained pairs | `variogram` | an all-pair enumeration and GSTools 1.7.0 (identical bins) | [Variograms and fitting](docs/methods/02_variograms.md) |
 | Bounded, deterministic multi-start variogram fitting, isotropic or three principal ranges | `variogram` | exact recovery of noise-free nested and anisotropic models | [Variograms and fitting](docs/methods/02_variograms.md) |
+| Simple, ordinary and universal kriging and coupled simple and ordinary cokriging on support-integrated covariance, with joint error covariance, measurement error, the continuous-support nugget convention, a condition limit and per-target diagnostics | `kriging` | R/gstat 2.1-6 (univariate, coupled, block, nugget and measurement-error cases, within 2e-10), PyKrige 1.7.3 and GSTools 1.7.0 | [Kriging and cokriging](docs/methods/03_kriging.md) |
+| Deterministic anisotropic neighbourhoods with per-variable and per-hole limits | `neighborhood` | stated selection rules | [Kriging and cokriging](docs/methods/03_kriging.md) |
+| Nearest-neighbour and inverse-distance baselines, with no implied variance | `baselines` | direct computation | [Kriging and cokriging](docs/methods/03_kriging.md) |
 
-Planned and not yet claimed: neighborhoods; nearest-neighbour and IDW baselines; simple, ordinary and universal kriging
-with support-integrated covariance; LMC fitting and full coupled cokriging; multiple-indicator CDFs; sequential
-Gaussian simulation; training-image Direct Sampling; the optional PyTorch CUDA kernels that retain the CPU algorithm's
+Planned and not yet claimed: LMC fitting; multiple-indicator CDFs; sequential Gaussian simulation; training-image Direct Sampling; the optional PyTorch CUDA kernels that retain the CPU algorithm's
 conditioning order. The contract for all of them is in [docs/api-contract.md](docs/api-contract.md).
 
 ## Scope
