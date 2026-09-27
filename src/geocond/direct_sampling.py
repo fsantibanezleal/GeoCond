@@ -24,6 +24,11 @@ The definition shared by the NumPy reference and the PyTorch (CUDA) scorer, so b
    has been examined without one, the best candidate actually scanned (earliest on ties) is used and the fallback is
    recorded. A node with no valid candidate at all is marked failed and left unwritten.
 6. The centre's values are copied: categories are TI codes, never interpolated. Hard data are never altered.
+7. With ``zones``, a node's candidates are only the valid TI centres of the node's zone, and step 3's permutation and
+   the scan fraction apply to that zone's centres. This is the zonal treatment of nonstationarity (Mariethoz, Renard
+   and Straubhaar 2010, section 6: "scanning a different part of a TI ... for each simulated zone"): a layered prior,
+   for instance, keeps its order when each depth layer of the grid scans the same layer of the TI. With every zone
+   equal the result is identical to the unzoned engine.
 
 Scanning candidates in chunks on a GPU preserves these semantics: a chunk is scored in parallel, but the earliest
 qualifying candidate in the node's order is taken, never the best of the chunk.
@@ -212,15 +217,18 @@ def direct_sampling(
     device: str = "cuda",
     candidate_chunk: int | None = None,
     distance_power: float = 0.0,
+    zones: tuple[ArrayLike, ArrayLike] | None = None,
     cancel: Callable[[], bool] | None = None,
 ) -> DirectSamplingResult:
     """One Direct Sampling realization on a grid of ``shape`` cells from ``training_image`` (see the module text for
     the exact definition). ``backend='torch'`` scores candidate chunks with PyTorch on ``device`` and selects the same
     candidates as the NumPy reference. ``candidate_chunk`` defaults to 1,024 candidates on NumPy and 65,536 on PyTorch,
-    the sizes at which each was fastest in the recorded benchmark; the chunk never changes the result."""
+    the sizes at which each was fastest in the recorded benchmark; the chunk never changes the result. ``zones`` is
+    ``(ti_zones, grid_zones)``, one integer per TI cell and per grid cell (step 7 of the module text)."""
     ti, kinds, shape, ti_valid, active, scale, sim, hard, _ = _prepare(
         training_image, shape, variable_kinds, hard_data, active_mask, ti_mask
     )
+    ti_zones, grid_zones = _zones(zones, ti_valid.shape, shape)
     max_neighbors = integer(max_neighbors, "max_neighbors")
     if not (radius == inf or positive(radius, "radius")):
         raise ValidationError("radius must be positive or infinite")
@@ -241,7 +249,10 @@ def direct_sampling(
     centers = np.argwhere(ti_valid)  # C order over (x, y, z); ids below are Fortran-order flat indices
     center_ids = np.ravel_multi_index(tuple(centers.T), ti_valid.shape, order="F")
     n_centers = len(centers)
-    max_scan = max(1, ceil(scan_fraction * n_centers))
+    # The candidates of each zone, as positions into ``centers`` in its order; one zone of every centre when unzoned.
+    zone_of_center = ti_zones[tuple(centers.T)]
+    by_zone = {int(z): np.flatnonzero(zone_of_center == z) for z in np.unique(zone_of_center)}
+    empty = np.zeros(0, np.int64)
 
     nodes = np.flatnonzero((active & ~hard).ravel(order="F"))
     path = nodes[np.random.default_rng([seed, 0]).permutation(len(nodes))]
@@ -278,7 +289,9 @@ def direct_sampling(
             weights = raw / raw.sum()
         else:
             weights = np.zeros(0)
-        permutation = np.random.default_rng([seed, 1, int(node)]).permutation(n_centers)
+        pool = by_zone.get(int(grid_zones[tuple(xyz)]), empty)
+        permutation = pool[np.random.default_rng([seed, 1, int(node)]).permutation(len(pool))]
+        max_scan = max(1, ceil(scan_fraction * len(pool))) if len(pool) else 0
         chosen = -1
         best, best_score = -1, inf
         examined = 0
@@ -315,5 +328,22 @@ def direct_sampling(
         sim, candidate, score_out, fallback, scanned, path, hard, active, failed, not failed.any(), int(seed), backend,
         {"max_neighbors": max_neighbors, "radius": radius, "threshold": threshold, "scan_fraction": scan_fraction,
          "candidate_chunk": candidate_chunk, "distance_power": distance_power, "variable_kinds": list(kinds),
-         "continuous_scales": scale.tolist(), "valid_centers": int(n_centers)},
+         "continuous_scales": scale.tolist(), "valid_centers": int(n_centers),
+         "zones": None if zones is None else {str(z): len(c) for z, c in by_zone.items()}},
     )
+
+
+def _zones(zones, ti_shape, grid_shape):
+    """Integer zone arrays for the TI and the grid; one shared zone when ``zones`` is None."""
+    if zones is None:
+        return np.zeros(ti_shape, np.int64), np.zeros(grid_shape, np.int64)
+    try:
+        ti_zones, grid_zones = (np.asarray(z) for z in zones)
+    except (TypeError, ValueError) as error:
+        raise ValidationError("zones must be (ti_zones, grid_zones)") from error
+    for name, z, expected in (("ti_zones", ti_zones, ti_shape), ("grid_zones", grid_zones, grid_shape)):
+        if z.shape != tuple(expected):
+            raise ValidationError(f"{name} must have the shape {tuple(expected)}")
+        if z.dtype.kind not in "iu":
+            raise ValidationError(f"{name} must hold integers")
+    return ti_zones.astype(np.int64), grid_zones.astype(np.int64)

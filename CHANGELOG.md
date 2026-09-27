@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.08.000] - 2026-09-27
+
+### Added
+
+- `direct_sampling(..., zones=(ti_zones, grid_zones))`: each node scans only the valid training-image centres of its
+  own zone, in a seeded permutation of that zone, with the scan fraction applied to the zone's count (Mariethoz,
+  Renard and Straubhaar 2010, section 6). One zone everywhere is the unzoned engine bit for bit; the PyTorch backend
+  selects the same candidates with zones. On a layered prior 20 layers deep, zones keep the order (0.957 of cells
+  against 0.959 in the TI) where the unzoned engine loses it (0.161). Needed by Sondara's categorical simulation in
+  depth layers.
+
 ## [0.07.000] - 2026-09-27
 
 ### Added
