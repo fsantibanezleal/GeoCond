@@ -11,5 +11,7 @@ what the tests establish against independent references, and the sources.
    cokriging, support integration and the nugget, measurement error, neighbourhoods, solver policy and baselines.
 4. [Indicator probabilities and Gaussian simulation](04_probability_and_simulation.md): multiple-indicator kriging
    with its order correction, the normal-score transform and its tails, and sequential Gaussian simulation.
+5. [Direct Sampling](05_direct_sampling.md): the definition shared by the CPU reference and the CUDA scorer, candidate
+   provenance, fallback, and a recorded benchmark of when each backend is faster.
 
 The contract for the methods not yet implemented is in [the API contract](../api-contract.md).
