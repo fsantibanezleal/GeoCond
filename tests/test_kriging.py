@@ -237,6 +237,18 @@ def test_uninformed_singular_and_duplicate_cases_report_an_honest_status():
     assert rescued.valid[0] and rescued.diagnostics[0]["regularization"] > 0
 
 
+def test_simple_kriging_beyond_every_range_returns_the_mean_with_a_zero_residual():
+    import warnings
+
+    x = np.array([[0.0, 0, 0], [10, 0, 0], [20, 0, 0]])
+    obs = Observations([point_support(p) for p in x], [1.0, 2.0, 3.0])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # 0/0 in the residual diagnostic was a RuntimeWarning and a NaN
+        out = predict(obs, [point_support([1000.0, 0, 0])], spherical(), method="simple", mean=2.5)
+    assert out.status == ("estimated",) and out.mean[0] == 2.5
+    assert out.diagnostics[0]["linear_residual"] == 0.0
+
+
 def test_line_self_covariance_converges_at_second_order_to_the_exact_integral():
     """The covariance has a kink at zero separation, so a product Gauss rule converges algebraically on a support's
     self-covariance; the exact value for a line of length L is (2/L^2) int_0^L (L - h) C(h) dh."""

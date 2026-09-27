@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.06.002] - 2026-09-27
+
+### Fixed
+
+- The linear-residual diagnostic of a kriging solve divided zero by zero, and reported NaN with a RuntimeWarning,
+  when simple kriging's target lies beyond the range of every selected observation (zero weights, zero right-hand
+  side). That exact solve now reports a residual of zero, in the NumPy and the torch lanes. Found by Sondara's
+  spatial-margin predictions.
+
 ## [0.06.001] - 2026-09-26
 
 ### Added
