@@ -11,6 +11,7 @@ from geocond.variogram import (
     ExperimentalVariogram,
     experimental_cross_variogram,
     experimental_variogram,
+    fit_lmc,
     fit_variogram,
 )
 
@@ -246,3 +247,53 @@ def test_a_field_simulated_from_a_known_covariance_fits_near_it():
     sill = fit.model.total_sill[0, 0]
     assert sill == pytest.approx(1.15, rel=0.3)
     assert fit.model.components[0].ranges[0] == pytest.approx(24.0, rel=0.45)
+
+
+def lmc_truth():
+    return CovarianceModel(
+        (CovarianceComponent("exponential", 12.0, [[1.6, 0.65], [0.65, 1.2]]),
+         CovarianceComponent("spherical", 9.0, [[0.4, -0.18], [-0.18, 0.7]])),
+        nugget=[[0.1, 0.02], [0.02, 0.15]],
+    )
+
+
+def synthetic_pair(model, a, b, direction, edges, count=200):
+    edges = np.asarray(edges, float)
+    sep = 0.5 * (edges[1:] + edges[:-1])
+    d = np.asarray(direction, float) / np.linalg.norm(direction)
+    empty = np.zeros(0, np.int64)
+    return ExperimentalVariogram(edges, sep, np.full(len(sep), count), model.variogram(sep[:, None] * d, a, b),
+                                 empty, empty, empty, "classical", d, None, None, False, a != b, 0, False, None, 0)
+
+
+def test_a_noise_free_lmc_is_recovered_from_direct_and_cross_variograms():
+    truth = lmc_truth()
+    edges = np.linspace(0, 30, 31)
+    variograms = {(a, b): synthetic_pair(truth, a, b, [1, 0, 0], edges) for a, b in [(0, 0), (0, 1), (1, 1)]}
+    fit = fit_lmc(variograms, ["exponential", "spherical"], isotropic=True, starts=6)
+    assert fit.objective < 1e-12
+    for got, want in zip(fit.model.components, truth.components, strict=True):
+        assert np.allclose(got.sill, want.sill, atol=1e-4) and got.ranges[0] == pytest.approx(want.ranges[0], rel=1e-4)
+    assert np.allclose(fit.model.nugget, truth.nugget, atol=1e-4)
+    assert all(np.min(e) >= -1e-12 for e in fit.spectra.values())
+
+
+def test_a_three_variable_lmc_stays_positive_semidefinite_and_is_recovered():
+    rng = np.random.default_rng(6)
+    factor = rng.normal(size=(3, 3))
+    truth = CovarianceModel((CovarianceComponent("spherical", 20.0, factor @ factor.T),), nugget=0.05 * np.eye(3))
+    edges = np.linspace(0, 30, 21)
+    variograms = {(a, b): synthetic_pair(truth, a, b, [0, 1, 0], edges) for a in range(3) for b in range(a, 3)}
+    fit = fit_lmc(variograms, ["spherical"], isotropic=True)
+    assert np.allclose(fit.model.components[0].sill, factor @ factor.T, atol=1e-3)
+    assert np.linalg.eigvalsh(fit.model.components[0].sill).min() >= -1e-12
+
+
+def test_lmc_inputs_are_checked():
+    truth = lmc_truth()
+    edges = np.linspace(0, 30, 11)
+    with pytest.raises(ValidationError, match="direct variogram"):
+        fit_lmc({(0, 1): synthetic_pair(truth, 0, 1, [1, 0, 0], edges), (0, 0): synthetic_pair(truth, 0, 0, [1, 0, 0], edges)},
+                ["spherical"], isotropic=True)
+    with pytest.raises(ValidationError, match="must be a cross variogram"):
+        fit_lmc({(0, 1): synthetic_pair(truth, 0, 0, [1, 0, 0], edges)}, ["spherical"], isotropic=True)

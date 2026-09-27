@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.04.000] - 2026-09-26
+
+### Added
+
+- `variogram.fit_lmc`: joint fitting of a linear model of coregionalization to direct and cross variograms, each sill
+  matrix and the nugget parameterized as L L^T so they are positive semidefinite by construction; variables
+  standardized while fitting; deterministic starts with every start recorded. Recovers the gstat reference LMC to 1e-4.
+- `probability`: an independent weighted PAVA, the bounded isotonic projection (PAVA clipped to [0, 1]) and
+  `indicator_kriging`, ordinary indicator kriging per threshold on one shared neighbourhood plan, with raw and
+  corrected CDFs, the correction's size, monotone interpolation between thresholds and unmodeled-tail statuses outside
+  them. Agrees with scikit-learn's `IsotonicRegression` and a generic QP.
+- `simulation`: `NormalScoreTransform` (weighted mid-rank plotting positions, tied values sharing one score, bounded or
+  declared tails, all recorded) and `sequential_gaussian` (seeded path per realization, recorded innovations and
+  conditional moments, exact hard data, native back-transform, E-type mean, quantiles and exceedance from native
+  realizations). Full-neighbourhood realizations equal the dense conditional Cholesky draw to 1e-10.
+- Docs: the indicator probabilities and Gaussian simulation page with two figures computed by the library, and the LMC
+  fitting section of the variogram page.
+
 ## [0.03.000] - 2026-09-26
 
 ### Added

@@ -1,6 +1,6 @@
 """Support-aware spatial conditioning; see the versioned API contract."""
 
-__version__ = "0.03.000"
+__version__ = "0.04.000"
 
 from .baselines import inverse_distance, nearest_neighbour
 from .compositing import Composite, composite_categories, composite_intervals, fixed_boundaries
@@ -16,6 +16,8 @@ from .covariance import (
 from .geometry import Survey, TrajectorySamples, tangent
 from .kriging import Observations, PredictionBatch, predict, support_covariance
 from .neighborhood import Neighborhood
+from .probability import IndicatorResult, bounded_isotonic, indicator_kriging, pava
+from .simulation import NormalScoreTransform, SimulationResult, sequential_gaussian
 from .support import Support, block_support, line_support, point_support, trajectory_support
 from .validation import CancelledError, NumericalError, ValidationError
 from .variogram import (
@@ -23,6 +25,7 @@ from .variogram import (
     VariogramFit,
     experimental_cross_variogram,
     experimental_variogram,
+    fit_lmc,
     fit_variogram,
 )
 
@@ -33,32 +36,40 @@ __all__ = [
     "CovarianceComponent",
     "CovarianceModel",
     "ExperimentalVariogram",
+    "IndicatorResult",
     "Neighborhood",
+    "NormalScoreTransform",
     "NumericalError",
     "Observations",
     "PredictionBatch",
+    "SimulationResult",
     "Support",
     "Survey",
     "TrajectorySamples",
     "ValidationError",
     "VariogramFit",
     "block_support",
+    "bounded_isotonic",
     "composite_categories",
     "composite_intervals",
     "correlation",
     "experimental_cross_variogram",
     "experimental_variogram",
+    "fit_lmc",
     "fit_variogram",
     "fixed_boundaries",
     "from_gstat",
     "from_pykrige",
+    "indicator_kriging",
     "inverse_distance",
     "line_support",
     "nearest_neighbour",
+    "pava",
     "point_support",
     "predict",
     "principal_frame",
     "psd_matrix",
+    "sequential_gaussian",
     "support_covariance",
     "tangent",
     "to_gstat",

@@ -10,7 +10,7 @@ pip install "geocond[reference]"   # plus the independent references the tests c
 
 ## Status
 
-Version 0.03.000. Each capability below is implemented, tested against an independent reference, and documented; the
+Version 0.04.000. Each capability below is implemented, tested against an independent reference, and documented; the
 rest of the planned core is listed after it and is not claimed.
 
 | Capability | Module | Checked against | Documentation |
@@ -25,8 +25,11 @@ rest of the planned core is listed after it and is not claimed.
 | Simple, ordinary and universal kriging and coupled simple and ordinary cokriging on support-integrated covariance, with joint error covariance, measurement error, the continuous-support nugget convention, a condition limit and per-target diagnostics | `kriging` | R/gstat 2.1-6 (univariate, coupled, block, nugget and measurement-error cases, within 2e-10), PyKrige 1.7.3 and GSTools 1.7.0 | [Kriging and cokriging](docs/methods/03_kriging.md) |
 | Deterministic anisotropic neighbourhoods with per-variable and per-hole limits | `neighborhood` | stated selection rules | [Kriging and cokriging](docs/methods/03_kriging.md) |
 | Nearest-neighbour and inverse-distance baselines, with no implied variance | `baselines` | direct computation | [Kriging and cokriging](docs/methods/03_kriging.md) |
+| Joint LMC fitting to direct and cross variograms, every sill matrix positive semidefinite by construction (B = L L^T) | `variogram` | exact recovery of the gstat reference LMC and a random three-variable LMC | [Variograms and fitting](docs/methods/02_variograms.md) |
+| Multiple-indicator kriging with the bounded isotonic (PAVA) correction and unmodeled-tail statuses | `probability` | scikit-learn `IsotonicRegression` and a generic QP | [Indicator probabilities and Gaussian simulation](docs/methods/04_probability_and_simulation.md) |
+| Weighted normal-score transform with recorded tie and tail policies; sequential Gaussian simulation with seeded paths, recorded innovations and exact hard data | `simulation` | the dense Gaussian conditional (exact, to 1e-10) and its moments | [Indicator probabilities and Gaussian simulation](docs/methods/04_probability_and_simulation.md) |
 
-Planned and not yet claimed: LMC fitting; multiple-indicator CDFs; sequential Gaussian simulation; training-image Direct Sampling; the optional PyTorch CUDA kernels that retain the CPU algorithm's
+Planned and not yet claimed: training-image Direct Sampling; the optional PyTorch CUDA kernels that retain the CPU algorithm's
 conditioning order. The contract for all of them is in [docs/api-contract.md](docs/api-contract.md).
 
 ## Scope
