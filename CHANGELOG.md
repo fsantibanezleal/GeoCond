@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.06.001] - 2026-09-26
+
+### Added
+
+- Minimum-curvature parity with welleng 0.29.1, the independent reference the API contract names: 12 seeded random
+  surveys and a near-straight section wrapping through north, stations and arc interpolation within 1e-9 of the
+  path length, doglegs within 1e-9 degrees. CI installs welleng.
+- `docs/methods/06_geometry_and_compositing.md`: the convention, minimum curvature with arc interpolation and
+  explicit extensions, supports and quadrature, and compositing, with two figures computed by GeoCond.
+
 ## [0.06.000] - 2026-09-26
 
 ### Added
