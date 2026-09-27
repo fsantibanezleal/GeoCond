@@ -211,6 +211,7 @@ def predict(
     neighborhood: Neighborhood | None = None,
     solver: dict | None = None,
     backend: str = "numpy",
+    device: str | None = None,
     cancel: Callable[[], bool] | None = None,
 ) -> PredictionBatch:
     """Predict ``target_variable`` (one index, or several predicted jointly) at every target support.
@@ -219,12 +220,14 @@ def predict(
     kriging (univariate only): 'linear', 'quadratic' or a callable returning covariates at points. ``solver`` may
     declare ``{"jitter": max_fraction}``: when the observation covariance is not positive definite, a jitter of
     1e-12, 1e-11, ... up to ``max_fraction`` times the largest total sill is added to its diagonal and reported;
-    without it a singular covariance is a failed target.
+    without it a singular covariance is a failed target. ``backend='torch'`` solves the point-support systems of simple
+    and ordinary kriging and cokriging in float64 batches on a PyTorch device (``device``, CUDA when available), with
+    the same neighbourhoods and failure rules.
     """
     if method not in METHODS:
         raise ValidationError(f"method must be one of {METHODS}")
-    if backend != "numpy":
-        raise ValidationError("backend 'numpy' is the implemented backend")
+    if backend not in ("numpy", "torch"):
+        raise ValidationError("backend must be 'numpy' or 'torch'")
     if not isinstance(observations, Observations):
         raise ValidationError("observations must be an Observations instance")
     if observations.n_variables > model.n_variables:
@@ -261,6 +264,10 @@ def predict(
             raise ValidationError(f"unknown solver options {sorted(unknown)}")
         jitter_max = float(solver.get("jitter", 0.0)) or None
     hood = neighborhood if neighborhood is not None else Neighborhood(max_samples=len(observations))
+    if backend == "torch":
+        if method == "universal" or solver is not None:
+            raise ValidationError("the torch lane runs simple and ordinary kriging without a jitter policy")
+        return _predict_torch(observations, targets, model, method, tv, means, hood, device, cancel)
     cache = _CovarianceCache(model, observations)
     obs = observations
     k = len(tv)
@@ -388,6 +395,84 @@ def predict(
             "regularization": applied,
         })
 
+    valid = np.array([s == "estimated" for s in status])
+    return PredictionBatch(out_mean, out_var, out_cov, valid, tuple(status), tuple(reasons), tuple(diagnostics),
+                           method, tv)
+
+
+def _predict_torch(observations, targets, model, method, tv, means, hood, device, cancel):
+    """The point-support systems in batches of equal neighbourhood size on a PyTorch device (see ``geocond.cuda``)."""
+    from .cuda import _torch, check_point_supports, device_of, solve_batch_torch
+
+    torch = _torch()
+    dev = device_of(device)
+    obs = observations
+    check_point_supports(obs.supports)
+    target_xyz = check_point_supports(targets)
+    k, m = len(tv), len(targets)
+    out_mean = np.full((m, k), np.nan)
+    out_var = np.full((m, k), np.nan)
+    out_cov = np.full((m, k, k), np.nan)
+    status: list[str] = ["estimated"] * m
+    reasons: list[str | None] = [None] * m
+    diagnostics: list[dict | None] = [None] * m
+    batches: dict[int, list] = {}
+    for ti in range(m):
+        cancel_if_requested(cancel)
+        idx, dist, why = hood.select(obs.centers, obs.variables, obs.groups, target_xyz[ti], tv)
+        if why is None and method == "ordinary":
+            missing = [t for t in tv if t not in set(obs.variables[idx].tolist())]
+            if missing:
+                why = f"no observation of variable {missing[0]} in the neighbourhood"
+        if why is not None:
+            status[ti], reasons[ti] = "uninformed", why
+            diagnostics[ti] = {"indices": idx.tolist(), "ids": obs.ids[idx].tolist()}
+            continue
+        batches.setdefault(len(idx), []).append((ti, idx, dist))
+    for _, members in sorted(batches.items()):
+        cancel_if_requested(cancel)
+        idx = np.array([mem[1] for mem in members])
+        pred, err, W, resid, lin, codes, emin, emax = solve_batch_torch(
+            torch, dev, model, method, obs.centers[idx], obs.variables[idx], obs.values[idx], obs.error_variance[idx],
+            target_xyz[[mem[0] for mem in members]], tv, means, MAX_CONDITION, NEGATIVE_VARIANCE,
+        )
+        for row, (ti, sel, dist) in enumerate(members):
+            if codes[row] == 1:
+                status[ti] = "failed"
+                reasons[ti] = ("the observation covariance is singular or ill conditioned (duplicate, near-duplicate or "
+                               "degenerate supports); declare measurement error or a jitter policy")
+                diagnostics[ti] = {"indices": sel.tolist(), "ids": obs.ids[sel].tolist(),
+                                   "covariance_eigenvalue_min": float(emin[row]),
+                                   "covariance_eigenvalue_max": float(emax[row])}
+                continue
+            if codes[row] == 2:
+                status[ti] = "failed"
+                reasons[ti] = "materially negative error variance: the covariance model or the solve is invalid here"
+                diagnostics[ti] = {"indices": sel.tolist(), "ids": obs.ids[sel].tolist()}
+                continue
+            w = W[row]
+            v = obs.variables[sel]
+            z = obs.values[sel]
+            out_mean[ti] = pred[row]
+            out_cov[ti] = err[row]
+            out_var[ti] = np.diag(err[row])
+            diagnostics[ti] = {
+                "indices": sel.tolist(),
+                "ids": obs.ids[sel].tolist(),
+                "distances": dist.tolist(),
+                "weights": w.tolist(),
+                "weight_sums": {int(u): w[v == u].sum(axis=0).tolist() for u in np.unique(v)},
+                "contributions": {int(u): (w[v == u].T @ z[v == u]).tolist() for u in np.unique(v)},
+                "groups": None if obs.groups is None else len({obs.groups[i] for i in sel}),
+                "linear_residual": float(lin[row]),
+                "constraint_residual": float(resid[row]),
+                "covariance_eigenvalue_min": float(emin[row]),
+                "covariance_eigenvalue_max": float(emax[row]),
+                "condition": float(emax[row] / emin[row]),
+                "negative_weight_mass": float(np.abs(w[w < 0]).sum()),
+                "regularization": 0.0,
+                "backend": "torch",
+            }
     valid = np.array([s == "estimated" for s in status])
     return PredictionBatch(out_mean, out_var, out_cov, valid, tuple(status), tuple(reasons), tuple(diagnostics),
                            method, tv)

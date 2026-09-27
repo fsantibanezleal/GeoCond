@@ -11,7 +11,7 @@ pip install "geocond[cuda]"        # plus PyTorch for the CUDA Direct Sampling s
 
 ## Status
 
-Version 0.05.000. Each capability below is implemented, tested against an independent reference, and documented; the
+Version 0.06.000. Each capability below is implemented, tested against an independent reference, and documented; the
 rest of the planned core is listed after it and is not claimed.
 
 | Capability | Module | Checked against | Documentation |
@@ -29,9 +29,10 @@ rest of the planned core is listed after it and is not claimed.
 | Joint LMC fitting to direct and cross variograms, every sill matrix positive semidefinite by construction (B = L L^T) | `variogram` | exact recovery of the gstat reference LMC and a random three-variable LMC | [Variograms and fitting](docs/methods/02_variograms.md) |
 | Multiple-indicator kriging with the bounded isotonic (PAVA) correction and unmodeled-tail statuses | `probability` | scikit-learn `IsotonicRegression` and a generic QP | [Indicator probabilities and Gaussian simulation](docs/methods/04_probability_and_simulation.md) |
 | Weighted normal-score transform with recorded tie and tail policies; sequential Gaussian simulation with seeded paths, recorded innovations and exact hard data | `simulation` | the dense Gaussian conditional (exact, to 1e-10) and its moments | [Indicator probabilities and Gaussian simulation](docs/methods/04_probability_and_simulation.md) |
+| Float64 CUDA lanes (PyTorch): every variogram pair tiled on the device; point-support simple and ordinary kriging and cokriging solved in batches | `cuda`, `variogram`, `kriging` | the NumPy reference: identical counts, bins within 1e-12, predictions within 1e-15 | [Variograms](docs/methods/02_variograms.md), [Kriging](docs/methods/03_kriging.md) |
 | Direct Sampling from a training image, categorical and continuous, with per-cell candidate provenance, fallback and completion records; a PyTorch CUDA scorer that selects the same candidates with bit-identical scores | `direct_sampling` | a plain-Python enumeration of the definition; the TI's conditional frequencies; CPU against CUDA, locally | [Direct Sampling](docs/methods/05_direct_sampling.md) |
 
-Planned and not yet claimed: the float64 CUDA lanes for variogram pairs and kriging systems; training-image Direct Sampling; the optional PyTorch CUDA kernels that retain the CPU algorithm's
+Planned and not yet claimed: training-image Direct Sampling; the optional PyTorch CUDA kernels that retain the CPU algorithm's
 conditioning order. The contract for all of them is in [docs/api-contract.md](docs/api-contract.md).
 
 ## Scope
