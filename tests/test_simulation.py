@@ -117,3 +117,69 @@ def test_a_limited_neighbourhood_still_conditions_on_data_and_earlier_nodes():
     result = sequential_gaussian(obs, [point_support(p) for p in nodes], model, identity_transform(z),
                                  realizations=2, seed=5, neighborhood=Neighborhood(max_samples=3))
     assert np.isfinite(result.gaussian).all() and np.all(result.conditional_sd > 0)
+
+
+def _line_problem():
+    """Four data holes 40 m around a line of 40 nodes at 1 m spacing, under a short and a long nested structure: the
+    case where the nodes crowd the data out of a single search (drillholes on a sparse grid)."""
+    model = CovarianceModel((CovarianceComponent("spherical", 10.0, [[0.5]]),
+                             CovarianceComponent("spherical", 200.0, [[0.5]])))
+    rng = np.random.default_rng(11)
+    depth = np.arange(40.0)
+    holes = [(40.0, 0.0), (-40.0, 0.0), (0.0, 40.0), (0.0, -40.0)]
+    data = np.array([[x, y, -z] for x, y in holes for z in depth])
+    groups = np.repeat(np.arange(4), 40)
+    z = np.repeat([1.5, 1.1, 1.3, 0.9], 40) + 0.2 * rng.standard_normal(len(data))
+    nodes = np.c_[np.zeros(40), np.zeros(40), -depth]
+    return model, data, z, groups, nodes
+
+
+def test_a_two_part_search_taking_everything_equals_the_single_search():
+    model, data, z, nodes = small_problem()
+    obs = Observations([point_support(p) for p in data], z)
+    targets = [point_support(p) for p in nodes]
+    single = sequential_gaussian(obs, targets, model, identity_transform(z), realizations=3, seed=7)
+    two = sequential_gaussian(obs, targets, model, identity_transform(z), realizations=3, seed=7,
+                              neighborhood=Neighborhood(max_samples=len(data)),
+                              node_neighborhood=Neighborhood(max_samples=len(nodes)))
+    assert np.array_equal(single.gaussian, two.gaussian) and np.array_equal(single.paths, two.paths)
+    assert two.node_neighborhood.max_samples == len(nodes) and single.node_neighborhood is None
+
+
+def test_the_data_part_keeps_its_group_limits():
+    model, data, z, groups, nodes = _line_problem()
+    obs = Observations([point_support(p) for p in data], z, groups=groups)
+    hood = Neighborhood(max_samples=8, max_per_group=2)
+    result = sequential_gaussian(obs, [point_support(p) for p in nodes], model, identity_transform(z),
+                                 realizations=4, seed=3, neighborhood=hood,
+                                 node_neighborhood=Neighborhood(max_samples=6))
+    for r in range(4):
+        first = result.paths[r, 0]  # no node simulated yet: the system is the grouped data selection alone
+        idx, _, why = hood.select(data, np.zeros(len(data), np.int64), groups, nodes[first], (0,))
+        assert why is None and len(idx) == 8 and np.bincount(groups[idx]).max() <= 2
+        c = model.between(data[idx], nodes[first][None, :])[:, 0]
+        w = np.linalg.solve(model.between(data[idx], data[idx]), c)
+        assert result.conditional_mean[r, first] == pytest.approx(w @ z[idx], abs=1e-12)
+    with pytest.raises(ValidationError, match="node_neighborhood"):
+        sequential_gaussian(obs, [point_support(p) for p in nodes], model, identity_transform(z), neighborhood=hood)
+    with pytest.raises(ValidationError, match="no group"):
+        sequential_gaussian(obs, [point_support(p) for p in nodes], model, identity_transform(z), neighborhood=hood,
+                            node_neighborhood=Neighborhood(max_samples=6, max_per_group=1))
+
+
+def test_a_two_part_search_keeps_the_data_where_nodes_crowd_them_out():
+    """Along a dense line of nodes 40 m from every datum, a single search of 8 soon holds only nodes, so the
+    realizations forget the data and their mean falls toward the prior mean 0; 8 data and 8 nodes searched apart
+    keep it nearer the dense conditional mean."""
+    model, data, z, groups, nodes = _line_problem()
+    obs = Observations([point_support(p) for p in data], z, groups=groups)
+    targets = [point_support(p) for p in nodes]
+    mu = model.between(nodes, data) @ np.linalg.solve(model.between(data, data), z)
+    single = sequential_gaussian(obs, targets, model, identity_transform(z), realizations=400, seed=1,
+                                 neighborhood=Neighborhood(max_samples=8))
+    two = sequential_gaussian(obs, targets, model, identity_transform(z), realizations=400, seed=1,
+                              neighborhood=Neighborhood(max_samples=8), node_neighborhood=Neighborhood(max_samples=8))
+    single_error = np.abs(single.gaussian.mean(axis=0) - mu).mean()
+    two_error = np.abs(two.gaussian.mean(axis=0) - mu).mean()
+    assert two_error < single_error - 0.05  # Monte Carlo error of these line averages is about 0.03
+    assert single.gaussian.mean() < two.gaussian.mean() < mu.mean()
